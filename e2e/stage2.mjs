@@ -276,19 +276,46 @@ try {
   ok(await seen(page.getByText("The last scene keeps playing in my head.")), "thought stayed after its film was removed");
 
   console.log("Opening screens, calendar, unfinished stack");
-  await page.evaluate(() => (localStorage.removeItem("strata:onboarded"), localStorage.removeItem("strata:mode")));
+  // someone brand new: no try-out data yet (kept aside and put back after)
+  await page.evaluate(() => {
+    localStorage.setItem("e2e:keep", localStorage.getItem("strata:try:v1"));
+    for (const k of ["strata:onboarded", "strata:mode", "strata:try:v1"]) localStorage.removeItem(k);
+  });
   await go("/welcome/");
   ok(await seen(page.getByText("Your head is full of things worth keeping.")), "first opening screen shows for someone new");
   await shot("20-onboarding-1");
   await page.getByRole("button", { name: "Next" }).click();
   ok(await seen(page.getByText("Catch them as they come.")), "second opening screen");
-  await page.getByRole("button", { name: "Next" }).click();
-  ok(await seen(page.getByText("Yours, and only yours.")), "third opening screen with the privacy note");
+  ok(!(await page.getByRole("button", { name: "Next" }).isVisible()), "second screen has no Next, you swipe up instead");
+  await page.mouse.move(200, 600);
+  await page.mouse.down();
+  await page.mouse.move(200, 420, { steps: 6 });
+  await page.mouse.up();
+  ok(await seen(page.getByText("Yours, and only yours.")), "swiping up puts the labels in line and moves on by itself");
   await shot("21-onboarding-3");
+  await page.getByRole("button", { name: "Give the mascot a poke" }).click();
+  ok(await seen(page.locator(".mascot.pop")), "poking the mascot pops its layers");
+  ok(await seen(page.locator(".onb-label.glow")), "and a light runs down the labels");
   await page.getByRole("button", { name: "Start your line" }).click();
+  ok(await seen(page.getByText("Hi! I keep your thoughts safe.")), "Start your line goes straight to Home, where the mascot says hello");
+  ok(await seen(page.getByText("Nothing here yet.")), "someone new starts with an empty Home, not sample data");
+  await page.getByRole("link", { name: "Write your first thought" }).click();
+  await page.getByLabel("Your thought").fill("My very first thought.");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  ok(await seen(page.getByRole("alertdialog", { name: /Keep this on your phone|Create an account/ })), "the first save offers an account");
+  await page.getByRole("button", { name: /on this phone/ }).click();
+  ok(await seen(page.getByText("My very first thought.")), "keeping it on the phone saves it");
+  await go("/write/");
+  await page.getByLabel("Your thought").fill("A second one.");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  ok(await seen(page.getByText("A second one.")), "after that, saving does not ask again");
   await go("/welcome/");
   ok(!(await page.getByText("Your head is full of things worth keeping.").isVisible()), "opening screens only show once");
-  await page.evaluate(() => localStorage.setItem("strata:mode", "local"));
+  await page.evaluate(() => {
+    localStorage.setItem("strata:try:v1", localStorage.getItem("e2e:keep"));
+    localStorage.removeItem("e2e:keep");
+    localStorage.setItem("strata:mode", "local");
+  });
   await page.evaluate(() => localStorage.removeItem("strata:onboarded"));
   await go("/");
   ok(await seen(page.getByText("Your head is full of things worth keeping.")), "people already set up see the opening screens once on Home");

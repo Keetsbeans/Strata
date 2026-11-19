@@ -94,12 +94,14 @@ export default function Home() {
 
       <main className="screen" style={{ paddingTop: 22, minHeight: 0 }}>
         {first ? (
-          <div className="card" style={{ padding: "18px 18px 16px" }}>
-            <span className="small muted">Your first card</span>
-            <p className="serif" style={{ fontSize: 22, lineHeight: 1.3, margin: "6px 0 14px" }}>
+          <div className="card has-mascot first-card" style={{ padding: "18px 18px 16px" }}>
+            <Mascot size={70} className="card-mascot" arms="wave" eyes="happy" mouth="smile" />
+            <span className="speech">Hi! I keep your thoughts safe.</span>
+            <p className="serif" style={{ fontSize: 22, lineHeight: 1.3, margin: "10px 0 6px" }}>
               What is one thing on your mind right now?
             </p>
-            <Link className="btn ink block" href="/new/">
+            <p className="small muted" style={{ margin: "0 0 14px" }}>Type it, or tap the microphone and say it out loud.</p>
+            <Link className="btn ink block shadow" href="/write/">
               Write your first thought
             </Link>
           </div>

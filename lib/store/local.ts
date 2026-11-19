@@ -2,6 +2,7 @@ import type { Collection, CollectionItem, Interest, SavedLink, Thought, ThoughtV
 import { DISCARD_DAYS } from "@/lib/types";
 import type { ImportResult, InterestPatch, NewInterest, NewThought, ShelfImport, Store, ThoughtPatch } from "./types";
 import { sampleData } from "./sample";
+import { isGuest } from "../guest";
 import { interestKey } from "@/lib/catalog/match";
 
 /** Try-out mode: everything lives in this browser only (localStorage). */
@@ -31,6 +32,8 @@ function load(): DB {
     }
   } catch {}
   const db = sampleData();
+  // people arriving through the opening screens start with a clean slate and write their own first thought
+  if (isGuest()) for (const k of Object.keys(db) as (keyof DB)[]) if (Array.isArray(db[k])) (db[k] as unknown[]) = [];
   save(db);
   return db;
 }

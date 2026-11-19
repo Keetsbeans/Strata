@@ -313,18 +313,44 @@ body:has(.lock) { background: var(--ink); }
 .ftile:active .front { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--ink); }
 
 /* ---------- onboarding ---------- */
-.onb { max-width: 480px; min-height: 100dvh; margin: 0 auto; padding: calc(40px + env(safe-area-inset-top)) 24px calc(32px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 28px; }
+.onb { max-width: 480px; min-height: 100dvh; margin: 0 auto; padding: calc(40px + env(safe-area-inset-top)) 24px calc(32px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 28px; touch-action: none; user-select: none; -webkit-user-select: none; }
 .onb-dark { background: var(--ink); color: var(--card); }
 body:has(.onb-dark) { background: var(--ink); }
 .onb-stage { position: relative; flex-grow: 1; min-height: 340px; }
-.onb-label { position: absolute; padding: 9px 16px; border-radius: 8px; font-size: 15px; font-weight: 600; white-space: nowrap; color: var(--ink); border: 1px solid var(--ink); transition: left 0.6s ease, top 0.6s ease, transform 0.6s ease; }
+.onb-stage.pile { cursor: grab; }
+.onb-pos { position: absolute; left: 0; top: 0; will-change: transform; }
+.onb-pos.flow { transition: transform 0.75s cubic-bezier(0.34, 1.3, 0.5, 1); }
+.onb-label { display: block; padding: 9px 16px; border-radius: 8px; font-size: 15px; font-weight: 600; white-space: nowrap; color: var(--ink); border: 1px solid var(--ink); }
 .onb-dark .onb-label.outline { color: var(--card); border-color: var(--card); }
-.onb-line { position: absolute; top: 0; left: 20px; border-left: 2px solid currentColor; transition: height 0.6s ease; }
-.onb-dot { position: absolute; left: 14px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid currentColor; }
-.onb-time { position: absolute; right: 0; font-size: 12px; opacity: 0.8; }
-.onb-mascot { position: absolute; right: 0; bottom: 0; }
+.onb-label.float { animation: onb-float 3.4s ease-in-out infinite; }
+.onb-label.glow, .onb-dot.glow { animation: onb-glow 0.9s ease-out both; }
+.onb-line { position: absolute; top: 0; left: 20px; border-left: 2px solid currentColor; transition: height 0.7s ease, opacity 0.4s; }
+.onb-dot { position: absolute; left: 14px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid currentColor; animation: onb-in 0.4s ease-out both; }
+.onb-time { position: absolute; right: 0; font-size: 12px; opacity: 0.8; animation: onb-in 0.5s ease-out both; }
+.onb-mascot { position: absolute; right: 0; bottom: 0; z-index: 2; }
+.onb-poke { position: relative; display: block; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 16px; }
+.onb-psst { position: absolute; right: 70px; top: -6px; padding: 3px 9px; background: var(--card); border: 1px solid var(--ink); border-radius: 8px 8px 2px 8px; font-size: 12px; font-weight: 600; color: var(--ink); white-space: nowrap; animation: onb-bob 1.6s ease-in-out infinite; }
+.onb-swipe { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border: 1px solid currentColor; border-radius: 12px; background: transparent; color: inherit; font: 600 14px var(--sans); animation: onb-nudge-up 1.6s ease-in-out infinite; }
 .onb-pip { height: 6px; border-radius: 3px; background: currentColor; transition: width 0.3s; }
-@media (prefers-reduced-motion: reduce) { .onb-label, .onb-line { transition: none; } }
+@keyframes onb-float { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 33% { transform: translate(3px, -7px) rotate(2.5deg); } 66% { transform: translate(-3px, -3px) rotate(-2deg); } }
+@keyframes onb-glow { 0% { transform: none; box-shadow: none; filter: none; } 30% { transform: translateY(-3px) scale(1.04); box-shadow: 0 0 0 3px var(--card), 0 0 16px 6px var(--butter); filter: brightness(1.12) saturate(1.3); } 100% { transform: none; box-shadow: none; filter: none; } }
+@keyframes onb-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes onb-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes onb-nudge-up { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+/* mascot layers: knocked askew, then snapping back; a poke pops them up and lets them land */
+.mascot .m-layer { transform-box: view-box; transform-origin: 60px 80px; transition: transform 0.7s cubic-bezier(0.34, 1.5, 0.5, 1); }
+.mascot.pop .m-l1 { animation: m-pop1 0.9s cubic-bezier(0.3, 0, 0.4, 1); }
+.mascot.pop .m-l2 { animation: m-pop2 0.9s cubic-bezier(0.3, 0, 0.4, 1); }
+.mascot.pop .m-l3 { animation: m-pop3 0.9s cubic-bezier(0.3, 0, 0.4, 1); }
+.mascot.live.pop .m-head, .mascot.pop .m-head { animation: m-laugh 0.25s ease-in-out 0.9s 4; }
+@keyframes m-pop1 { 0% { transform: none; } 30% { transform: translateY(-10px) rotate(-4deg); } 60% { transform: translateY(1px); } 75% { transform: translateY(-2px); } 100% { transform: none; } }
+@keyframes m-pop2 { 0% { transform: none; } 35% { transform: translateY(-24px) rotate(6deg); } 65% { transform: translateY(2px); } 80% { transform: translateY(-3px); } 100% { transform: none; } }
+@keyframes m-pop3 { 0% { transform: none; } 40% { transform: translateY(-40px) rotate(-10deg); } 72% { transform: translateY(3px); } 86% { transform: translateY(-4px); } 100% { transform: none; } }
+@keyframes m-laugh { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-5deg) translateY(1px); } }
+@media (prefers-reduced-motion: reduce) {
+  .onb-pos.flow, .onb-line, .mascot .m-layer { transition: none; }
+  .onb-label.float, .onb-label.glow, .onb-dot.glow, .onb-psst, .onb-swipe, .mascot.pop * { animation: none !important; }
+}
 
 /* calendar */
 .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
@@ -378,6 +404,8 @@ body:has(.onb-dark) { background: var(--ink); }
 @media (prefers-reduced-motion: reduce) { .mascot.live * { animation: none !important; } }
 
 /* mascot sitting on a card */
+.first-card .speech { position: absolute; right: 92px; top: -30px; padding: 5px 11px; background: var(--card); border: 1px solid var(--ink); border-radius: 10px 10px 2px 10px; font-size: 13px; font-weight: 600; animation: onb-bob 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .first-card .speech { animation: none; } }
 .has-mascot { position: relative; margin-top: 34px; }
 .card-mascot { position: absolute; right: 14px; top: -50px; pointer-events: none; z-index: 2; }
 

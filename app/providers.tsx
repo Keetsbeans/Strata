@@ -7,6 +7,7 @@ import { CloudStore } from "@/lib/store/cloud";
 import { supabase } from "@/lib/supabase";
 import { isUnlocked, lockEnabled, markLocked, RELOCK_AFTER_MS, turnOffLock } from "@/lib/lock";
 import LockScreen from "@/components/LockScreen";
+import { takePending } from "@/lib/guest";
 
 type Mode = "local" | "cloud" | null;
 type Ctx = {
@@ -89,7 +90,12 @@ export default function Providers({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (store) store.purge().catch(() => {});
-  }, [store]);
+    // a thought written before making an account lands in the new account
+    if (store && mode === "cloud") {
+      const p = takePending();
+      if (p) store.addThought({ ...p, thread_id: null, interest_id: null }).catch(() => {});
+    }
+  }, [store, mode]);
 
   // send people without an account choice to the welcome screen
   const isPublic = PUBLIC.includes(path);

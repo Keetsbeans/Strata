@@ -9,6 +9,8 @@ import Dialog from "@/components/Dialog";
 import Topics from "@/components/Topics";
 import Dictate from "@/components/Dictate";
 import { Dial, MinuteWheel, fmt, useTimer } from "@/components/Timer";
+import { isGuest, setGuest, holdPending } from "@/lib/guest";
+import { cloudReady } from "@/lib/supabase";
 
 const LONG_AT = 320; // characters before a card suggests opening as a page
 
@@ -33,6 +35,7 @@ function Write() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [showTimer, setShowTimer] = useState(false);
+  const [askAccount, setAskAccount] = useState<boolean | null>(null);
   const [now] = useState(() => new Date());
   const timer = useTimer(5);
   const area = useRef<HTMLTextAreaElement>(null);
@@ -72,8 +75,11 @@ function Write() {
   const dirty = body.trim() !== original.trim();
   const empty = !body.trim();
 
-  const save = async (finished: boolean) => {
+  const save = async (finished: boolean, keepHere = false) => {
     if (empty) return;
+    // someone straight from the opening screens: offer an account before the first save
+    if (!id && !keepHere && isGuest()) return setLeaving(false), setAskAccount(finished);
+    if (keepHere) setGuest(false);
     setBusy(true);
     setError("");
     try {
@@ -204,6 +210,41 @@ function Write() {
           </button>
         )}
       </div>
+
+      {askAccount !== null && (
+        <Dialog
+          title={cloudReady ? "Create an account to keep this" : "Keep this on your phone for now"}
+          body={
+            cloudReady
+              ? "An account keeps your thoughts safe if you lose your phone, and on every device you use. Your thought comes with you."
+              : "Accounts are being switched on soon. Until then, everything you write stays on this phone, and only you can see it."
+          }
+          face="asking"
+          onClose={() => setAskAccount(null)}
+          actions={
+            <>
+              {cloudReady && (
+                <button
+                  className="btn ink block shadow"
+                  onClick={() => {
+                    holdPending({ body: body.trim(), topics, kind, finished: askAccount, thread_id: threadId, interest_id: interestId ?? null });
+                    setGuest(false);
+                    try {
+                      localStorage.removeItem("strata:mode");
+                    } catch {}
+                    window.location.assign((process.env.NEXT_PUBLIC_BASE_PATH || "") + "/signin/?new=1");
+                  }}
+                >
+                  Create an account
+                </button>
+              )}
+              <button className={cloudReady ? "link" : "btn ink block"} style={cloudReady ? { fontWeight: 500 } : undefined} onClick={() => save(askAccount, true)}>
+                {cloudReady ? "Keep it on this phone for now" : "Save it on this phone"}
+              </button>
+            </>
+          }
+        />
+      )}
 
       {leaving && (
         <Dialog
