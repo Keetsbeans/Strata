@@ -7,6 +7,9 @@ type Props = {
   label?: string;
   onLeft?: () => void;
   onRight?: () => void;
+  /** swipe up; the card then takes the touch so the page doesn't scroll */
+  onUp?: () => void;
+  upHint?: string;
   leftHint?: string;
   rightHint?: string;
   /** called while dragging with -1..1 (left..right), and 0 when let go */
@@ -16,9 +19,11 @@ type Props = {
 const FAR = 90; // how far (px) a card must travel to count as a swipe
 
 /** A card you can fling left or right with a finger. Buttons inside it still work as normal. */
-export default function SwipeCard({ children, className = "", label, onLeft, onRight, leftHint, rightHint, onLean }: Props) {
+export default function SwipeCard({ children, className = "", label, onLeft, onRight, onUp, upHint, leftHint, rightHint, onLean }: Props) {
   const start = useRef<{ x: number; y: number; id: number } | null>(null);
   const [dx, setDx] = useState(0);
+  const [dy, setDy] = useState(0);
+  const axis = useRef<"x" | "y">("x");
   const [state, setState] = useState<"" | "dragging" | "flying" | "settling">("");
 
   const lean = (x: number) => onLean?.(Math.max(-1, Math.min(1, x / FAR)));
@@ -31,11 +36,18 @@ export default function SwipeCard({ children, className = "", label, onLeft, onR
     const s = start.current;
     if (!s || s.id !== e.pointerId) return;
     const x = e.clientX - s.x;
+    const y = e.clientY - s.y;
     if (state !== "dragging") {
-      if (Math.abs(x) < 8 || Math.abs(x) < Math.abs(e.clientY - s.y)) return; // let the page scroll
+      if (onUp && y < -8 && Math.abs(y) > Math.abs(x)) {
+        axis.current = "y";
+      } else {
+        if (Math.abs(x) < 8 || Math.abs(x) < Math.abs(y)) return; // let the page scroll
+        axis.current = "x";
+      }
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       setState("dragging");
     }
+    if (axis.current === "y") return setDy(Math.min(0, y));
     if ((x > 0 && !onRight) || (x < 0 && !onLeft)) return setDx(x / 4); // resist a side that does nothing
     setDx(x);
     lean(x);
@@ -44,6 +56,22 @@ export default function SwipeCard({ children, className = "", label, onLeft, onR
     if (!start.current) return;
     start.current = null;
     if (state !== "dragging") return;
+    if (axis.current === "y") {
+      if (dy < -FAR && onUp) {
+        setState("flying");
+        setDy(-700);
+        setTimeout(() => {
+          onUp();
+          setDy(0);
+          setState("");
+        }, 260);
+      } else {
+        setState("settling");
+        setDy(0);
+        setTimeout(() => setState(""), 260);
+      }
+      return;
+    }
     const go = dx > FAR ? onRight : dx < -FAR ? onLeft : undefined;
     if (go) {
       setState("flying");
@@ -67,7 +95,7 @@ export default function SwipeCard({ children, className = "", label, onLeft, onR
     <article
       className={`swipe ${state} ${className}`}
       aria-label={label}
-      style={{ transform: dx ? `translateX(${dx}px) rotate(${dx / 18}deg)` : undefined, opacity: state === "flying" ? 0 : 1 }}
+      style={{ transform: dy ? `translateY(${dy}px) scale(${1 + dy / 3000})` : dx ? `translateX(${dx}px) rotate(${dx / 18}deg)` : undefined, opacity: state === "flying" ? 0 : 1, touchAction: onUp ? "none" : undefined }}
       onPointerDown={down}
       onPointerMove={move}
       onPointerUp={up}
@@ -75,6 +103,7 @@ export default function SwipeCard({ children, className = "", label, onLeft, onR
     >
       {rightHint && dx > 0 && <span className="swipe-hint right" style={{ opacity: shown }}>{rightHint}</span>}
       {leftHint && dx < 0 && <span className="swipe-hint left" style={{ opacity: shown }}>{leftHint}</span>}
+      {upHint && dy < 0 && <span className="swipe-hint up" style={{ opacity: Math.min(1, -dy / FAR) }}>{upHint}</span>}
       {children}
     </article>
   );

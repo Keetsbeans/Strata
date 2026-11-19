@@ -181,6 +181,13 @@ try {
   await page.mouse.up();
   const b1 = await first.boundingBox();
   ok(Math.abs(b1.x - b0.x) > 40, "the film moved with the finger");
+  const bgBefore = await page.locator(".board").evaluate((el) => el.style.backgroundPosition);
+  const bb = await page.locator(".board").boundingBox();
+  await page.mouse.move(bb.x + bb.width - 30, bb.y + 240);
+  await page.mouse.down();
+  for (let i = 1; i <= 5; i++) await page.mouse.move(bb.x + bb.width - 30 - i * 15, bb.y + 240 - i * 10);
+  await page.mouse.up();
+  ok((await page.locator(".board").evaluate((el) => el.style.backgroundPosition)) !== bgBefore, "the dots move with the board");
   const placed = await page.evaluate(() => JSON.parse(localStorage.getItem("strata:try:v1")).collectionItems.filter((x) => x.x != null).length);
   ok(placed >= 1, "where it was put is saved");
   await page.getByRole("button", { name: "Stickers", exact: true }).click();
@@ -234,6 +241,23 @@ try {
   await page.getByRole("button", { name: "Link to 1 thread" }).click();
   ok(await seen(page.getByText(/Also linked in 2 threads/)), "one thought linked into two threads");
   ok(!(await page.getByRole("button", { name: "Add to a collection" }).count()), "thoughts no longer go into collections");
+
+  console.log("Thoughts screen: tabs, list or cards, pin to a thread");
+  await go("/thoughts/");
+  ok(await seen(page.getByRole("tab", { name: /Unsorted/ })), "filters are tabs, not buttons");
+  ok(await seen(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Inbox" })), "Inbox is in the bottom bar");
+  ok(await seen(page.locator("header").getByRole("link", { name: "Search" })), "search is an icon at the top");
+  const pinCard = page.locator(".thought-wrap", { hasText: "My best mornings" });
+  await pinCard.getByRole("button", { name: /thread/ }).click();
+  ok(await seen(page.getByRole("heading", { name: /Which thread should this go under/ })), "the pin asks which thread");
+  await page.getByRole("dialog").getByRole("button", { name: /On busyness/ }).click();
+  ok(await seen(page.getByText("Put in “On busyness”.")), "pinned into a thread from the list");
+  await page.getByRole("button", { name: "Show as cards to flip through" }).click();
+  await page.locator(".deck-front").waitFor();
+  ok(await seen(page.locator(".deck-front").getByRole("button", { name: /thread/ })), "each card has the pin too");
+  await shot("05c-thoughts-cards");
+  await page.getByRole("button", { name: "Show as a list" }).click();
+  await shot("05d-thoughts-list");
 
   console.log("Book and music search");
   await go("/interests/add/?kind=book");
@@ -316,8 +340,16 @@ try {
   await shot("08c-import-sort");
   await page.getByRole("region", { name: "Do with the picked things" }).getByRole("button", { name: "Heavy" }).click();
   ok(await seen(page.getByText("Gave 1 the mood Heavy.")), "gave a mood from the import page");
-  ok((await page.locator(".saved-tile").count()) === 1, "sorted films leave the No mood yet list");
-  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Flip through" }).click();
+  await page.locator(".flip-item").waitFor();
+  await page.locator(".flip-item").getByRole("button", { name: "Quiet" }).click();
+  ok((await page.locator(".flip-item").getByRole("button", { name: "Quiet" }).getAttribute("aria-pressed")) === "true", "flip through the import and give a mood");
+  await shot("08d-import-flip");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  ok(await seen(page.getByText("That's all of them")), "flipped through to the end");
+  await page.getByRole("button", { name: "Flip through" }).click();
+  ok((await page.locator(".saved-tile").count()) <= 1, "sorted films leave the No mood yet list");
+  await page.locator("header").getByRole("button", { name: "Done", exact: true }).click();
   await page.waitForURL(/\/inbox\//);
   await page.getByText("Shared to Strata").waitFor();
   ok(!(await page.locator(".import-line").count()), "Done takes the import off Inbox");
@@ -461,8 +493,9 @@ try {
 
   console.log("Swipe and mascot");
   await go("/review/");
+  await page.waitForURL(/view=cards/);
   await page.locator(".deck-front").waitFor();
-  const before = await page.locator("header .small").innerText();
+  const before = await page.locator(".swipe-help").innerText();
   const box = await page.locator(".deck-front").boundingBox();
   const y = box.y + box.height / 3;
   await page.mouse.move(box.x + box.width / 2, y);
@@ -472,8 +505,19 @@ try {
   ok((await page.locator(".card-mascot.arms-up").count()) === 1, "mascot cheers while you drag right");
   await shot("24-swipe");
   await page.mouse.up();
-  await page.waitForFunction((b) => document.querySelector("header .small")?.textContent !== b, before, { timeout: 4000 });
-  ok(true, "swiping right kept the card and moved on (" + before + " → " + (await page.locator("header .small").innerText()) + ")");
+  await page.waitForFunction((b) => document.querySelector(".swipe-help")?.textContent !== b, before, { timeout: 4000 });
+  ok(true, "swiping right kept the card and moved on");
+  const upText = (await page.locator(".deck-front .ruled-text").innerText()).slice(0, 20);
+  const ub = await page.locator(".deck-front").boundingBox();
+  await page.mouse.move(ub.x + ub.width / 2, ub.y + ub.height / 2);
+  await page.mouse.down();
+  for (let k = 1; k <= 8; k++) await page.mouse.move(ub.x + ub.width / 2, ub.y + ub.height / 2 - k * 20);
+  ok(await seen(page.locator(".swipe-hint.up")), "dragging up shows Not sure");
+  await page.mouse.up();
+  await page.waitForTimeout(500);
+  ok(!(await page.locator(".deck-front .ruled-text").innerText()).startsWith(upText), "swiping up moves on");
+  const stillUnsorted = await page.evaluate((t) => JSON.parse(localStorage.getItem("strata:try:v1")).thoughts.some((x) => x.body.startsWith(t) && !x.kept && !x.discarded_at), upText);
+  ok(stillUnsorted, "and leaves that thought unsorted");
   ok((await page.locator(".mascot.live").count()) > 0, "mascot moves on screen");
   await go("/");
   ok(await seen(page.locator(".has-mascot .card-mascot")), "mascot waves from the Pick up card on Home");
@@ -494,7 +538,7 @@ try {
       return out;
     });
   const found = { unnamed: new Set(), small: new Set() };
-  for (const path of ["/", "/thoughts/", "/review/", "/stack/", "/calendar/", "/interests/", "/interests/?kind=book", "/collections/", "/collection/?id=c1", "/inbox/", "/search/", "/profile/", "/settings/", "/new/", "/threads/", "/discarded/"]) {
+  for (const path of ["/", "/thoughts/", "/thoughts/?filter=unsorted&view=cards", "/stack/", "/calendar/", "/interests/", "/interests/?kind=book", "/collections/", "/collection/?id=c1", "/inbox/", "/search/", "/profile/", "/settings/", "/new/", "/threads/", "/discarded/"]) {
     await go(path);
     await page.waitForTimeout(150);
     const a = await audit();

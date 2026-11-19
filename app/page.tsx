@@ -68,9 +68,14 @@ export default function Home() {
       <header className="dark home-head">
         <div className="between">
           <span style={{ fontSize: 15, color: "var(--on-dark)" }}>{first ? "Welcome" : hello}</span>
-          <Link href="/profile/" className="profile-btn" aria-label="Your profile">
-            <Avatar size={44} />
-          </Link>
+          <span className="row" style={{ gap: 8 }}>
+            <Link href="/search/" className="icon-btn round search-dark" aria-label="Search">
+              <Icon name="search" size={20} />
+            </Link>
+            <Link href="/profile/" className="profile-btn" aria-label="Your profile">
+              <Avatar size={44} />
+            </Link>
+          </span>
         </div>
         <h1 style={{ fontSize: 30, lineHeight: 1.08, letterSpacing: "-0.02em", margin: "10px 0 18px" }}>
           {first ? (
@@ -162,7 +167,7 @@ export default function Home() {
           <h2 style={{ fontSize: 17 }}>Your folders</h2>
           {first && <span className="small muted">These fill up as you go. Nothing needs sorting today.</span>}
           <div className="folders">
-            <Folder href="/review/" label="To flip through" count={unsorted.length} icon="flip" colour="var(--butter)" sheet="var(--blue)" />
+            <Folder href="/thoughts/?filter=unsorted&view=cards" label="Unsorted" count={unsorted.length} icon="flip" colour="var(--butter)" sheet="var(--blue)" />
             <Folder href="/stack/" label="Unfinished" count={drafts.length} icon="unfinished" colour="var(--blue)" sheet="var(--lilac)" />
             <Folder href="/interests/" label="Saved" count={interests.length} icon="interests" colour="var(--lilac)" sheet="var(--butter)" />
             <Folder href="/collections/" label="Collections" count={collections.length} icon="collections" colour="var(--butter)" sheet="var(--lilac)" />

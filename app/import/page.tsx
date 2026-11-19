@@ -10,6 +10,10 @@ import { usePictureFill } from "@/lib/catalog/pictures";
 import Icon from "@/components/Icon";
 import { CollectionPicker } from "@/components/Pickers";
 import { FilterBar, NO_FILTERS, SavedTile, matches, type Filters } from "@/components/Saved";
+import SwipeCard from "@/components/SwipeCard";
+import Poster from "@/components/Poster";
+import { moodColour } from "@/lib/moods";
+import type { Interest } from "@/lib/types";
 
 const FROM: Record<string, string> = { letterboxd: "Letterboxd", goodreads: "Goodreads" };
 
@@ -28,6 +32,8 @@ function ImportSort() {
   const [picked, setPicked] = useState<string[]>([]);
   const [toColl, setToColl] = useState(false);
   const [note, setNote] = useState("");
+  const [flip, setFlip] = useState(false);
+  const [seen, setSeen] = useState<string[]>([]);
   useEffect(() => setMoods(getMoods()), []);
   const items = data?.items ?? [];
   const shown = items.filter((i) => (!noMood || !i.moods.length) && matches(i, f));
@@ -45,7 +51,7 @@ function ImportSort() {
     );
   const kind = items[0]?.kind === "book" ? ["book", "books"] : ["film", "films"];
   const left = items.filter((i) => !i.moods.length).length;
-  const flip = (x: string) => setPicked((p) => (p.includes(x) ? p.filter((y) => y !== x) : [...p, x]));
+  const toggle = (x: string) => setPicked((p) => (p.includes(x) ? p.filter((y) => y !== x) : [...p, x]));
   const done = async () => {
     await store.finishImport(batch.id);
     router.push("/inbox/?tab=sort");
@@ -82,17 +88,34 @@ function ImportSort() {
           <button className="pill" aria-pressed={noMood} onClick={() => setNoMood(!noMood)}>
             <span>No mood yet</span>
           </button>
-          <FilterBar items={items} value={f} onChange={setF} moods={moods} />
+          <FilterBar items={items} value={f} onChange={setF} moods={moods} skip={["mood"]} />
+          <button className={"pill" + (flip ? " on" : "")} aria-pressed={flip} onClick={() => (setFlip(!flip), setSeen([]), setPicked([]))}>
+            <span>Flip through</span>
+          </button>
         </div>
         <span className="small muted" style={{ marginTop: -8 }}>
-          Tap things to pick them, then give them a mood or add them to a collection. Everything is already saved.
+          {flip ? "One at a time: tap a mood, then swipe to the next." : "Tap things to pick them, then give them a mood or add them to a collection. Everything is already saved."}
         </span>
         {note && <span className="small muted" role="status">{note}</span>}
-        {shown.length > 0 ? (
+        {flip ? (
+          <FlipImport
+            items={shown}
+            seen={seen}
+            moods={moods}
+            onNext={(x) => setSeen((s) => [...s, x])}
+            onMood={async (it, m) => {
+              const has = it.moods.some((y) => y.toLowerCase() === m.toLowerCase());
+              await store.updateInterest(it.id, { moods: has ? it.moods.filter((y) => y.toLowerCase() !== m.toLowerCase()) : [...it.moods, m] });
+              setData((d) => d && { ...d, items: d.items.map((x) => (x.id === it.id ? { ...x, moods: has ? x.moods.filter((y) => y.toLowerCase() !== m.toLowerCase()) : [...x.moods, m] } : x)) });
+            }}
+            onCollect={(it) => (setPicked([it.id]), setToColl(true))}
+            onDone={done}
+          />
+        ) : shown.length > 0 ? (
           <>
             <div className="saved-grid">
               {shown.map((it) => (
-                <SavedTile key={it.id} it={it} sub={[it.year, it.moods[0]].filter(Boolean).join(" · ")} picked={picked.includes(it.id)} onPick={() => flip(it.id)} />
+                <SavedTile key={it.id} it={it} sub={[it.year, it.moods[0]].filter(Boolean).join(" · ")} picked={picked.includes(it.id)} onPick={() => toggle(it.id)} />
               ))}
             </div>
             {picked.length < shown.length && (
@@ -109,7 +132,7 @@ function ImportSort() {
           </div>
         )}
       </main>
-      {picked.length > 0 && (
+      {picked.length > 0 && !flip && (
         <div className="select-bar" role="region" aria-label="Do with the picked things">
           <div className="between">
             <strong style={{ fontSize: 14 }}>{picked.length} selected</strong>
@@ -142,6 +165,48 @@ function ImportSort() {
         />
       )}
     </>
+  );
+}
+
+/** one film or book at a time; moods stay on the card until you swipe on */
+function FlipImport({ items, seen, moods, onNext, onMood, onCollect, onDone }: { items: Interest[]; seen: string[]; moods: string[]; onNext: (id: string) => void; onMood: (it: Interest, m: string) => void; onCollect: (it: Interest) => void; onDone: () => void }) {
+  // once a card has a mood it would leave the "No mood yet" list; keep it on screen until it is swiped
+  const [hold, setHold] = useState<Interest | null>(null);
+  const left = items.filter((i) => !seen.includes(i.id));
+  const it = hold && !seen.includes(hold.id) ? items.find((i) => i.id === hold.id) ?? hold : left[0];
+  if (!it)
+    return (
+      <div className="empty">
+        <h2>That&apos;s all of them</h2>
+        <p>Tap Done to take this import off your Inbox.</p>
+        <button className="btn ink sm" onClick={onDone}>Done</button>
+      </div>
+    );
+  const next = () => (onNext(it.id), setHold(null));
+  return (
+    <div className="stack" style={{ gap: 12 }}>
+      <SwipeCard key={it.id} className="card flip-item" label={it.title} onRight={next} onLeft={next} rightHint="Next" leftHint="Skip">
+        <Poster src={it.image_url} title={it.title} kind={it.kind} className="flip-poster" />
+        <strong style={{ fontSize: 18, fontWeight: 600 }}>{it.title}</strong>
+        <span className="small muted" style={{ marginTop: -6 }}>{[it.creator, it.year].filter(Boolean).join(" · ")}</span>
+        <div className="row" style={{ flexWrap: "wrap", gap: 2 }}>
+          {moods.map((m) => {
+            const on = it.moods.some((y) => y.toLowerCase() === m.toLowerCase());
+            return (
+              <button key={m} className={"pill" + (on ? " on" : "")} aria-pressed={on} onClick={() => (setHold(it), onMood(it, m))}>
+                <span>
+                  <i style={{ width: 9, height: 9, borderRadius: "50%", border: "1px solid currentColor", background: moodColour(m), display: "inline-block" }} />
+                  {m}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <button className="btn sm" onClick={() => (setHold(it), onCollect(it))}>Add to a collection</button>
+      </SwipeCard>
+      <p className="small muted swipe-help">{seen.length + 1} of {seen.length + left.length} · swipe either way for the next one</p>
+      <button className="btn sm ink" onClick={next}>Next</button>
+    </div>
   );
 }
 

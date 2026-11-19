@@ -9,6 +9,7 @@ import Nav from "@/components/Nav";
 import ThoughtTabs from "@/components/ThoughtTabs";
 import { preview } from "@/components/ThoughtCard";
 import Mascot from "@/components/Mascot";
+import Icon from "@/components/Icon";
 import { rootOf } from "@/lib/threads";
 
 export default function Threads() {
@@ -39,8 +40,8 @@ export default function Threads() {
       <main className="screen">
         <header className="between" style={{ minHeight: 48 }}>
           <h1 className="h-big">Thoughts</h1>
-          <Link className="btn" href="/review/">
-            Flip through
+          <Link className="icon-btn round" href="/search/" aria-label="Search">
+            <Icon name="search" size={20} />
           </Link>
         </header>
         <ThoughtTabs on="threads" unsorted={unsorted} unfinished={unfinished} />

@@ -7,8 +7,8 @@ const items = [
   { href: "/", label: "Home" },
   { href: "/thoughts/", label: "Thoughts", also: ["/thought/", "/threads/", "/thread/", "/discarded/", "/review/"] },
   { href: "/new/", label: "New thought", plus: true, also: ["/write/"] },
-  { href: "/collections/", label: "Collections", also: ["/interests/", "/interest/", "/collection/", "/import/"] },
-  { href: "/search/", label: "Search" },
+  { href: "/collections/", label: "Collections", also: ["/interests/", "/interest/", "/collection/"] },
+  { href: "/inbox/", label: "Inbox", also: ["/import/"] },
 ];
 
 export default function Nav() {
