@@ -1,7 +1,7 @@
 import type { Collection, CollectionItem, Decor, ImportBatch, Interest, InterestKind, Placement, Thought, ThoughtKind, ThoughtVersion, Thread, ThreadLink, ThreadState, SavedLink } from "@/lib/types";
 
 export type NewThought = { body: string; kind: ThoughtKind; finished: boolean; topics?: string[]; thread_id?: string | null; interest_id?: string | null };
-export type ThoughtPatch = Partial<Pick<Thought, "body" | "topics" | "finished" | "thread_id" | "kind" | "kept" | "interest_id">>;
+export type ThoughtPatch = Partial<Pick<Thought, "body" | "topics" | "finished" | "thread_id" | "kind" | "kept" | "interest_id" | "word_links">>;
 
 export type NewInterest = Pick<Interest, "kind" | "title"> & Partial<Omit<Interest, "id" | "created_at" | "updated_at">>;
 export type InterestPatch = Partial<Omit<Interest, "id" | "created_at" | "updated_at">>;
@@ -29,12 +29,13 @@ export interface Store {
   threads(): Promise<Thread[]>; // not discarded
   thread(id: string): Promise<Thread | null>;
   addThread(title: string): Promise<Thread>;
-  updateThread(id: string, patch: { title?: string; state?: ThreadState; note?: string }): Promise<Thread>;
+  updateThread(id: string, patch: { title?: string; state?: ThreadState; note?: string; labels?: string[] }): Promise<Thread>;
   /** a new thread that grows from this thought */
   startThread(thoughtId: string, title: string, note?: string): Promise<Thread>;
   /** thoughts shown in other thoughts' threads */
   threadLinks(): Promise<ThreadLink[]>;
-  linkToThreads(thoughtId: string, threadIds: string[]): Promise<void>;
+  /** under: a thought in that thread to hang it under (only when linking into one thread) */
+  linkToThreads(thoughtId: string, threadIds: string[], under?: string | null): Promise<void>;
   unlink(linkId: string): Promise<void>;
   /** keepThoughts: the thoughts leave the thread and stay in the list. Otherwise they go to Discarded with it. */
   discardThread(id: string, keepThoughts: boolean): Promise<void>;

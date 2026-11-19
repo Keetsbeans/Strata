@@ -20,7 +20,12 @@ export type Thought = {
   discarded_at: string | null;
   /** how many earlier versions exist */
   version_count: number;
+  /** words in the thought linked to a collection or a saved film, book, song or article */
+  word_links?: WordLink[];
 };
+
+/** a phrase in a thought that points at a collection or a saved thing. Matched by its text, first time it appears. */
+export type WordLink = { text: string; kind: "collection" | "interest"; id: string };
 
 export type ThoughtVersion = { id: string; thought_id: string; body: string; created_at: string };
 
@@ -38,10 +43,13 @@ export type Thread = {
   root_id?: string | null;
   /** an optional line about what the thread follows */
   note?: string;
+  /** your own labels, to group and filter threads */
+  labels?: string[];
 };
 
 /** a thought shown inside another thought's thread, without being copied or moved */
-export type ThreadLink = { id: string; thread_id: string; thought_id: string; added_at: string };
+/** under_id: the thought in that thread it hangs under; none means under the thread as a whole */
+export type ThreadLink = { id: string; thread_id: string; thought_id: string; added_at: string; under_id?: string | null };
 
 export const DISCARD_DAYS = 30;
 

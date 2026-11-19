@@ -451,3 +451,9 @@ alter table public.interests add column if not exists import_id uuid references 
 
 revoke all on public.thread_links, public.imports from anon;
 grant select, insert, update, delete on public.thread_links, public.imports to authenticated;
+
+-- threads can carry your own labels; a linked thought can hang under one thought in the thread;
+-- words in a thought can point at a collection or a saved thing
+alter table public.threads add column if not exists labels text[] not null default '{}' check (cardinality(labels) <= 20);
+alter table public.thread_links add column if not exists under_id uuid references public.thoughts (id) on delete set null;
+alter table public.thoughts add column if not exists word_links jsonb not null default '[]' check (jsonb_typeof(word_links) = 'array' and jsonb_array_length(word_links) <= 200);

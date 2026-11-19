@@ -11,6 +11,8 @@ import PickUpRow from "@/components/PickUpRow";
 import PickMany from "@/components/PickMany";
 import { preview } from "@/components/ThoughtCard";
 import { timeline } from "@/lib/threads";
+import Topics from "@/components/Topics";
+import type { Thought } from "@/lib/types";
 
 function ThreadView() {
   const { store } = useApp();
@@ -24,17 +26,19 @@ function ThreadView() {
     const elsewhere = all
       .filter((t) => t.finished && !here.has(t.id))
       .map((t) => ({ id: t.id, title: preview(t.body, 90), serif: true, sub: `${day(t.created_at, { weekday: false })}${t.thread_id && titles.get(t.thread_id) ? ` · in ${titles.get(t.thread_id)}` : ""}` }));
-    return { thread, entries, titles, elsewhere, every: all.filter((t) => t.thread_id === id) };
+    const labels = [...new Set(threads.flatMap((x) => x.labels ?? []))].sort();
+    return { thread, entries, titles, elsewhere, labels, every: all.filter((t) => t.thread_id === id) };
   }, [store, id]);
   const [asking, setAsking] = useState(false);
   const [keep, setKeep] = useState(true);
-  const [editing, setEditing] = useState<null | { title: string; note: string }>(null);
-  const [linking, setLinking] = useState(false);
+  const [editing, setEditing] = useState<null | { title: string; note: string; labels: string[] }>(null);
+  // linking a thought in: under one particular thought, or under the thread as a whole
+  const [linking, setLinking] = useState<null | { under: Thought | null }>(null);
   const listRef = useRef<HTMLOListElement>(null);
 
   if (error) return <main className="screen no-nav"><p className="error">{error}</p></main>;
   if (!data) return <main className="screen no-nav" />;
-  const { thread, entries, titles, elsewhere, every } = data;
+  const { thread, entries, titles, elsewhere, labels, every } = data;
   if (!thread || thread.discarded_at)
     return (
       <main className="screen no-nav">
@@ -64,7 +68,7 @@ function ThreadView() {
   };
   const saveEdit = async () => {
     if (!editing?.title.trim()) return;
-    await store.updateThread(thread.id, { title: editing.title.trim().slice(0, 200), note: editing.note.trim().slice(0, 500) });
+    await store.updateThread(thread.id, { title: editing.title.trim().slice(0, 200), note: editing.note.trim().slice(0, 500), labels: editing.labels.slice(0, 20) });
     setEditing(null);
     reload();
   };
@@ -77,7 +81,7 @@ function ThreadView() {
         </Link>
         <span className="h-mid" style={{ fontWeight: 600 }}>Thread</span>
         <div className="row" style={{ gap: 8 }}>
-          <button className="btn sm" onClick={() => setEditing({ title: thread.title, note: thread.note ?? "" })}>
+          <button className="btn sm" onClick={() => setEditing({ title: thread.title, note: thread.note ?? "", labels: thread.labels ?? [] })}>
             Edit
           </button>
           <button className="icon-btn" aria-label="Delete this thread" onClick={() => setAsking(true)}>
@@ -88,6 +92,13 @@ function ThreadView() {
       <div className="stack" style={{ gap: 6 }}>
         <h1 className="h-title">{thread.title}</h1>
         {thread.note && <p className="serif" style={{ margin: 0, fontSize: 17, lineHeight: 1.35 }}>{thread.note}</p>}
+        {!!thread.labels?.length && (
+          <span className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+            {thread.labels.map((l) => (
+              <Link key={l} href={`/threads/?label=${encodeURIComponent(l)}`} className="label-chip"><span>{l}</span></Link>
+            ))}
+          </span>
+        )}
       </div>
       <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
         <button
@@ -105,14 +116,14 @@ function ThreadView() {
       </div>
       <PickUpRow thoughts={every} onViewMore={() => listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} />
       <ol className="timeline" ref={listRef} style={{ scrollMarginTop: 16 }}>
-        {entries.map(({ thought: t, root, link }) => (
-          <li key={link?.id ?? t.id}>
+        {entries.map(({ thought: t, root, link, under }) => (
+          <li key={link?.id ?? t.id} className={under ? "under" : undefined}>
             <span className={"tl-dot" + (root ? " root" : link ? " open" : "")} aria-hidden="true" />
             <div className={"card stack" + (link ? " tl-branch" : "")} style={{ gap: 4, borderRadius: 10, position: "relative", ...(root ? { boxShadow: "3px 3px 0 var(--lilac)" } : {}) }}>
               {root && <span className="tl-label">Started here</span>}
               {link && (
                 <span className="row" style={{ gap: 6, alignItems: "center" }}>
-                  <span className="tl-label grow">Linked from: {t.thread_id && titles.get(t.thread_id) ? titles.get(t.thread_id) : "a thought on its own"}</span>
+                  <span className="tl-label grow">{under ? "Linked under the thought above" : "Linked"} · from {t.thread_id && titles.get(t.thread_id) ? titles.get(t.thread_id) : "a thought on its own"}</span>
                   <button className="icon-btn" style={{ border: 0, background: "transparent", margin: "-10px -10px -10px 0" }} aria-label="Take this link out" onClick={async () => (await store.unlink(link.id), reload())}>
                     <Icon name="close" size={14} />
                   </button>
@@ -124,6 +135,11 @@ function ThreadView() {
                 </span>
                 <span className="serif" style={{ fontSize: 17, lineHeight: 1.35, whiteSpace: "pre-wrap" }}>{link ? preview(t.body, 220) : t.body}</span>
               </Link>
+              {!under && (
+                <button className="tl-linkhere" onClick={() => setLinking({ under: t })} aria-label={`Link a thought under the thought from ${day(t.created_at, { weekday: false })}`}>
+                  <Icon name="link" size={14} width={2} /> Link a thought under this
+                </button>
+              )}
             </div>
           </li>
         ))}
@@ -133,8 +149,8 @@ function ThreadView() {
             <Link href={`/write/?thread=${thread.id}`} className="btn block dashed" style={{ fontWeight: 500, minHeight: 46 }}>
               Add a follow-up
             </Link>
-            <button className="link small" style={{ minHeight: 40 }} onClick={() => setLinking(true)}>
-              Link a thought from elsewhere
+            <button className="link small" style={{ minHeight: 44 }} onClick={() => setLinking({ under: null })}>
+              Link a thought to the whole thread
             </button>
           </div>
         </li>
@@ -154,21 +170,27 @@ function ThreadView() {
           <div className="stack" style={{ gap: 8 }}>
             <input className="input" aria-label="Thread name" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} />
             <textarea className="input" rows={3} aria-label="A note about this thread" placeholder="A note about what this thread follows (optional)" value={editing.note} onChange={(e) => setEditing({ ...editing, note: e.target.value })} style={{ resize: "none", paddingTop: 12 }} />
+            <span className="small" style={{ fontWeight: 600, marginTop: 4 }}>Labels <span className="muted" style={{ fontWeight: 400 }}>to group threads and filter them</span></span>
+            <Topics value={editing.labels} onChange={(l) => setEditing({ ...editing, labels: l })} known={labels} word="label" example="Work" />
           </div>
         </Dialog>
       )}
       {linking && (
         <PickMany
-          title="Link a thought here"
-          intro="It shows here on its own little branch. Nothing is copied, and the thought stays where it is."
+          title={linking.under ? "Link a thought under this one" : "Link a thought here"}
+          intro={
+            linking.under
+              ? `It shows right under “${preview(linking.under.body, 60)}”. Nothing is copied, and the thought stays where it is.`
+              : "It shows here on its own little branch. Nothing is copied, and the thought stays where it is."
+          }
           items={elsewhere}
           find="Find a thought"
           empty="No other thoughts to link yet."
           confirm={(k) => `Link ${k} ${k === 1 ? "thought" : "thoughts"}`}
-          onClose={() => setLinking(false)}
+          onClose={() => setLinking(null)}
           onDone={async (ids) => {
-            for (const x of ids) await store.linkToThreads(x, [thread.id]);
-            setLinking(false);
+            for (const x of ids) await store.linkToThreads(x, [thread.id], linking.under?.id ?? null);
+            setLinking(null);
             reload();
           }}
         />

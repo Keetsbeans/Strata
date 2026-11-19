@@ -1,3 +1,6 @@
+"use client";
+import { useEffect, useState } from "react";
+
 type Props = {
   size?: number;
   eyes?: "dot" | "closed" | "happy" | "wide" | "look";
@@ -10,10 +13,18 @@ type Props = {
   move?: boolean;
   /** 0 = layers neatly stacked, 1 = knocked askew. Changes glide. */
   loose?: number;
+  /** tap it and it pops, like on the welcome screens. On everywhere unless the parent handles taps itself. */
+  tap?: boolean;
 };
 
 /** The little stack of three layers. Keep it small. */
-export default function Mascot({ size = 72, eyes = "dot", mouth = "smile", arms = "down", tilt = 0, line = "#151515", className, move = true, loose = 0 }: Props) {
+export default function Mascot({ size = 72, eyes = "dot", mouth = "smile", arms = "down", tilt = 0, line = "#151515", className, move = true, loose = 0, tap = true }: Props) {
+  const [pop, setPop] = useState(0);
+  useEffect(() => {
+    if (!pop) return;
+    const id = setTimeout(() => setPop(0), 1900);
+    return () => clearTimeout(id);
+  }, [pop]);
   const L = (dx: number, dy: number, r: number) => ({ transform: `translate(${dx * loose}px, ${dy * loose}px) rotate(${r * loose}deg)` });
   const [armL, armR] = {
     down: ["M25 62q-9 3-9 13", "M95 62q9 3 9 13"],
@@ -22,7 +33,7 @@ export default function Mascot({ size = 72, eyes = "dot", mouth = "smile", arms 
     chin: ["M25 62q-9 3-9 13", "M95 62q13-4 4-14q-3-3-8-2"],
     out: ["M25 62q-10-1-15 5", "M95 62q10-1 15 5"],
   }[arms];
-  const cls = ["mascot", move && "live", move && `arms-${arms}`, className].filter(Boolean).join(" ");
+  const cls = ["mascot", move && "live", move && `arms-${arms}`, tap && "mascot-tap", pop && "pop", className].filter(Boolean).join(" ");
   const eye = {
     dot: (
       <>
@@ -57,7 +68,18 @@ export default function Mascot({ size = 72, eyes = "dot", mouth = "smile", arms 
     wobble: <path d="M53 44q2.3-3 4.6 0t4.6 0t4.6 0" />,
   }[mouth];
   return (
-    <svg aria-hidden="true" className={cls} width={size} height={size} viewBox="0 0 120 120" fill="none" stroke={line} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      aria-hidden="true"
+      onClick={
+        tap
+          ? (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setPop((n) => n + 1);
+            }
+          : undefined
+      }
+      className={cls} width={size} height={size} viewBox="0 0 120 120" fill="none" stroke={line} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M46 96v11h-7M74 96v11h7" />
       <g className="m-all">
       <g className="m-layer m-l1" style={L(-7, 2, -5)}>

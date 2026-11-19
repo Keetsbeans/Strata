@@ -7,6 +7,7 @@ import { useData } from "@/lib/useData";
 import Nav from "@/components/Nav";
 import Mascot from "@/components/Mascot";
 import Icon from "@/components/Icon";
+import TopIcons from "@/components/TopIcons";
 import BoardCover from "@/components/BoardCover";
 import { CollectionForm, contents } from "@/components/CollectionBits";
 
@@ -24,12 +25,12 @@ export default function Collections() {
     <>
       <main className="screen" style={{ gap: 18 }}>
         <header className="between">
-          <h1 className="h-big">Collections</h1>
-          <span className="row" style={{ gap: 8 }}>
-            <Link className="icon-btn round" href="/search/" aria-label="Search">
-              <Icon name="search" size={20} />
-            </Link>
-            <button className="btn sm" onClick={() => setMaking(true)}>New</button>
+          <h1 className="h-page">Collections</h1>
+          <span className="row" style={{ gap: 2 }}>
+            <TopIcons />
+            <button className="new-pill" onClick={() => setMaking(true)} aria-label="New collection">
+              <span><Icon name="plus" size={15} width={2.4} /> New</span>
+            </button>
           </span>
         </header>
         <p className="muted" style={{ margin: "-6px 0 0", fontSize: 14 }}>Films, books, music and links you like, kept together. Your thoughts stay in Thoughts.</p>

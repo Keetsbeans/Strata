@@ -113,3 +113,64 @@ export function ThoughtPicker({ thoughts, title, sub, onPick, onClose }: { thoug
     </Sheet>
   );
 }
+
+/** link a word in a thought to one of your collections or a saved film, book, song or article. Starts with a search on that word. */
+export function WordLinkPicker({ store, word, onPick, onClose }: { store: Store; word: string; onPick: (kind: "collection" | "interest", id: string) => void; onClose: () => void }) {
+  const [cols, setCols] = useState<Collection[] | null>(null);
+  const [items, setItems] = useState<Interest[] | null>(null);
+  const [q, setQ] = useState(word);
+  useEffect(() => {
+    store.collections().then(setCols);
+    store.interests().then(setItems);
+  }, [store]);
+  const term = normTitle(q);
+  const hit = (s: string) => !term || normTitle(s).includes(term);
+  const c = (cols ?? []).filter((x) => hit(x.title + " " + (x.note ?? "")));
+  const i = (items ?? []).filter((x) => hit(x.title + " " + x.creator)).slice(0, 30);
+  const loaded = cols && items;
+  return (
+    <Sheet label="Link a word" onClose={onClose}>
+      <h2>Link “{word}”</h2>
+      <p>Point it at a collection or something you saved. Tapping the word then opens it.</p>
+      <input className="input" type="search" placeholder="Search collections and saved things" aria-label="Search collections and saved things" value={q} onChange={(e) => setQ(e.target.value)} />
+      {loaded && c.length > 0 && (
+        <div className="stack" style={{ gap: 8 }}>
+          <span className="small" style={{ fontWeight: 600 }}>Collections</span>
+          {c.map((x) => (
+            <button key={x.id} className="item-row" onClick={() => onPick("collection", x.id)}>
+              <span className="thumb coll-thumb" aria-hidden="true" />
+              <span className="grow">
+                <strong>{x.title}</strong>
+                <span className="sub">Collection</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+      {loaded && i.length > 0 && (
+        <div className="stack" style={{ gap: 8 }}>
+          <span className="small" style={{ fontWeight: 600 }}>Saved</span>
+          {i.map((x) => (
+            <button key={x.id} className="item-row" onClick={() => onPick("interest", x.id)}>
+              <Poster src={x.image_url} title={x.title} kind={x.kind} className="thumb" />
+              <span className="grow">
+                <strong>{x.title}</strong>
+                <span className="sub">{details(x)}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+      {loaded && !c.length && !i.length && (
+        <span className="muted">
+          Nothing matches “{q}”.{" "}
+          {term && (
+            <button className="link" onClick={() => setQ("")}>
+              Show everything
+            </button>
+          )}
+        </span>
+      )}
+    </Sheet>
+  );
+}

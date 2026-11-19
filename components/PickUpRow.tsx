@@ -23,7 +23,7 @@ function dailyShuffle<T extends { id: string }>(list: T[]) {
  * If nothing was touched lately, 3 picks from further back instead.
  * Swipe to the end for "View more", which scrolls down to the full list.
  */
-export default function PickUpRow({ thoughts, onViewMore, min = 4 }: { thoughts: Thought[]; onViewMore: () => void; min?: number }) {
+export default function PickUpRow({ thoughts, onViewMore, min = 4, small }: { thoughts: Thought[]; onViewMore: () => void; min?: number; small?: boolean }) {
   const { picks, recent } = useMemo(() => {
     const since = Date.now() - RECENT_DAYS * 86400000;
     const byWork = [...thoughts].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
@@ -38,11 +38,11 @@ export default function PickUpRow({ thoughts, onViewMore, min = 4 }: { thoughts:
         <h2 style={{ fontSize: 15 }}>{recent ? "Pick up again" : "From further back"}</h2>
         <span className="small muted">Swipe</span>
       </div>
-      <div className="pickup">
+      <div className={"pickup" + (small ? " small" : "")}>
         {picks.map((t) => (
           <Link key={t.id} href={t.finished ? `/thought/?id=${t.id}` : `/write/?id=${t.id}`} className="card pickup-card">
             <span className="small muted">{t.finished ? `Worked on ${relDay(t.updated_at)}` : "Unfinished"}</span>
-            <span className="serif" style={{ fontSize: 17, lineHeight: 1.3 }}>{preview(t.body, 90)}</span>
+            <span className="serif" style={{ fontSize: small ? 15 : 17, lineHeight: 1.3 }}>{preview(t.body, small ? 70 : 90)}</span>
           </Link>
         ))}
         <button type="button" className="card pickup-card pickup-more" onClick={onViewMore}>

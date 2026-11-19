@@ -14,6 +14,8 @@ import Mascot from "@/components/Mascot";
 import PickUpRow from "@/components/PickUpRow";
 import ThoughtDeck from "@/components/ThoughtDeck";
 import Icon from "@/components/Icon";
+import TopIcons from "@/components/TopIcons";
+import SlideSeg from "@/components/SlideSeg";
 import type { Thought } from "@/lib/types";
 import { putInThread } from "@/lib/threads";
 
@@ -27,7 +29,14 @@ function Thoughts() {
     return { thoughts, names: new Map(threads.map((t) => [t.id, t.title])) };
   }, [store]);
   const data = d?.thoughts;
-  const [view, setView] = useState<"list" | "cards">(q.get("view") === "cards" ? "cards" : "list");
+  const [view, setView] = useState<"list" | "cards">(q.get("view") === "list" ? "list" : "cards");
+  useEffect(() => {
+    if (q.get("view")) return;
+    try {
+      if (localStorage.getItem("strata:thoughts-view") === "list") setView("list");
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [pinning, setPinning] = useState<Thought | null>(null);
   const [note, setNote] = useState("");
   const [selecting, setSelecting] = useState(false);
@@ -93,6 +102,9 @@ function Thoughts() {
   const showCards = view === "cards" && cardsOk && !selecting;
   const pickView = (v: "list" | "cards") => {
     setView(v);
+    try {
+      localStorage.setItem("strata:thoughts-view", v);
+    } catch {}
     window.history.replaceState(null, "", v === "cards" ? `?${new URLSearchParams({ ...(filter !== "all" ? { filter } : {}), view: "cards" })}` : filter !== "all" ? `?filter=${filter}` : "/thoughts/");
   };
   const label = dayParam
@@ -103,25 +115,21 @@ function Thoughts() {
     <>
       <main className="screen" style={selecting ? { paddingBottom: 120 } : undefined}>
         <header className="between" style={{ minHeight: 48 }}>
-          <h1 className="h-big">{selecting ? `${picked.length} selected` : "Thoughts"}</h1>
+          <h1 className="h-page">{selecting ? `${picked.length} selected` : "Thoughts"}</h1>
           {selecting ? (
-            <button className="btn" onClick={() => (setSelecting(false), setPicked([]))}>
+            <button className="btn sm" onClick={() => (setSelecting(false), setPicked([]))}>
               Cancel
             </button>
           ) : (
-            <Link className="icon-btn round" href="/search/" aria-label="Search">
-              <Icon name="search" size={20} />
-            </Link>
+            <TopIcons />
           )}
         </header>
+        {filter === "all" && !dayParam && !selecting && <PickUpRow thoughts={data} small onViewMore={() => listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} />}
         <ThoughtTabs on={filter} unsorted={unsorted.length} unfinished={unfinished.length} />
         {dayParam && (
           <Link href="/thoughts/" className="small" style={{ fontWeight: 600 }}>
             Showing one day only. Show every day
           </Link>
-        )}
-        {filter === "all" && !dayParam && !selecting && !showCards && (
-          <PickUpRow thoughts={data} onViewMore={() => listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} />
         )}
         {list.length > 0 && (
           <div className="between" ref={listRef} style={{ margin: "-6px 0 -8px", scrollMarginTop: 16 }}>
@@ -140,10 +148,10 @@ function Thoughts() {
                   </button>
                 )}
                 {cardsOk && (
-                  <span className="viewswitch" role="group" aria-label="Show as">
-                    <button aria-pressed={!showCards} aria-label="Show as a list" onClick={() => pickView("list")}><span><Icon name="list" size={17} /></span></button>
-                    <button aria-pressed={showCards} aria-label="Show as cards to flip through" onClick={() => pickView("cards")}><span><Icon name="cards" size={17} /></span></button>
-                  </span>
+                  <SlideSeg label="Show as" dep={showCards} style={{ padding: 2 }}>
+                    <button className="vs" aria-pressed={showCards} aria-label="Show as cards to flip through" onClick={() => pickView("cards")}><Icon name="cards" size={17} /></button>
+                    <button className="vs" aria-pressed={!showCards} aria-label="Show as a list" onClick={() => pickView("list")}><Icon name="list" size={17} /></button>
+                  </SlideSeg>
                 )}
               </span>
             )}

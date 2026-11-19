@@ -1,4 +1,7 @@
+"use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 /** The folder-shaped tiles on Home: a tab, a sheet peeking out, and an icon with an offset colour patch. */
 const ICONS: Record<string, { fill: React.ReactNode; line: React.ReactNode }> = {
@@ -56,8 +59,17 @@ type Props = { href: string; label: string; count: number; icon: keyof typeof IC
 
 export default function Folder({ href, label, count, icon, colour, sheet, dark }: Props) {
   const ic = ICONS[icon];
+  const router = useRouter();
+  const [tapped, setTapped] = useState(false);
+  // the sheet pops out of the folder first, then the page opens
+  const open = (e: React.MouseEvent) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    e.preventDefault();
+    setTapped(true);
+    setTimeout(() => router.push(href), 220);
+  };
   return (
-    <Link href={href} className={"ftile" + (dark ? " dark-tile" : "")} aria-label={`${label}, ${count}`}>
+    <Link href={href} onClick={open} className={"ftile" + (dark ? " dark-tile" : "") + (tapped ? " tapped" : "")} aria-label={`${label}, ${count}`}>
       <span aria-hidden="true" className="tab" style={{ background: colour }} />
       <span aria-hidden="true" className="sheet" style={{ background: sheet }} />
       <span className="front" style={{ background: colour }}>

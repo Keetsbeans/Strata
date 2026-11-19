@@ -209,32 +209,62 @@ try {
   await page.getByRole("button", { name: "Tiles" }).click();
 
   console.log("Pin an existing thought from its own page");
-  await go("/thoughts/");
+  await go("/thoughts/?view=list");
   await page.getByText("A website is closer to a room than a poster.").click();
   await page.getByRole("button", { name: "Pin to a film, book or song" }).click();
   await page.getByRole("button", { name: /Columbus/ }).click();
   ok(await seen(page.getByRole("link", { name: /Columbus/ })), "thought shows the film it's pinned to");
 
+  console.log("Press and hold a word to link it");
+  await page.evaluate(() => {
+    const el = document.querySelector(".ruled-text");
+    const node = [...el.querySelectorAll("span")].map((s) => s.firstChild).find((n) => n && n.textContent.includes("poster"));
+    const at = node.textContent.indexOf("poster");
+    const r = document.createRange();
+    r.setStart(node, at);
+    r.setEnd(node, at + 6);
+    const sel = document.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+  });
+  await page.getByRole("button", { name: "Link to a collection" }).click();
+  ok(await seen(page.getByRole("heading", { name: "Link “poster”" })), "choosing a word offers to link it, with a search");
+  await page.getByLabel("Search collections and saved things").fill("rainy");
+  await shot("05-word-link");
+  await page.getByRole("button", { name: /For a rainy Sunday/ }).click();
+  ok(await seen(page.locator(".word-link", { hasText: "poster" })), "the word is now a link in the thought");
+  ok((await page.locator(".word-link").getAttribute("href")).includes("/collection/?id=c2"), "and it opens the collection");
+  ok(await seen(page.getByRole("button", { name: "Unlink poster" })), "linked words are listed and can be unlinked");
+
   console.log("Threads grow under a thought, and thoughts can be linked");
   ok(await seen(page.getByText(/Also linked in 1 thread/)), "a linked thought says which threads show it");
   await go("/thread/?id=sample-thread");
   ok(await seen(page.locator(".card", { hasText: "Started here" }).getByText("Almost nothing happens in Perfect Days")), "the thread starts with its first thought");
-  ok(await seen(page.getByText("Linked from: a thought on its own")), "a linked thought sits on its own branch");
+  ok(await seen(page.getByText(/Linked · from a thought on its own/)), "a linked thought sits on its own branch");
+  ok(await seen(page.locator(".label-chip", { hasText: "Film" })), "the thread shows its labels");
   await shot("05a-thread");
-  await go("/thoughts/");
+  await go("/thoughts/?view=list");
   await page.getByText("Why do people perform busyness").click();
   await page.getByRole("button", { name: "Start a thread from this" }).click();
   await page.getByLabel("Thread name").fill("On busyness");
   await page.getByRole("button", { name: "Start the thread" }).click();
   await page.waitForURL(/\/thread\//);
   ok(await seen(page.locator(".card", { hasText: "Started here" }).getByText("Why do people perform busyness")), "new thread grows from the thought");
-  await page.getByRole("button", { name: "Link a thought from elsewhere" }).click();
+  await page.getByRole("button", { name: "Link a thought to the whole thread" }).click();
   await page.getByRole("checkbox", { name: /I remember songs/ }).click();
   await page.getByRole("button", { name: "Link 1 thought" }).click();
-  ok(await seen(page.getByText("Linked from: a thought on its own")), "linked a thought from elsewhere");
-  await go("/thoughts/");
+  ok(await seen(page.getByText(/Linked · from a thought on its own/)), "linked a thought from elsewhere");
+  await page.locator(".timeline li", { hasText: "Started here" }).getByRole("button", { name: /Link a thought under/ }).click();
+  ok(await seen(page.getByRole("heading", { name: "Link a thought under this one" })), "each thought in a thread can take a link under it");
+  await page.getByRole("checkbox", { name: /A website is closer/ }).click();
+  await page.getByRole("button", { name: "Link 1 thought" }).click();
+  ok(await seen(page.locator(".timeline li.under", { hasText: "A website is closer" })), "the linked thought sits right under that thought");
+  const order = await page.locator(".timeline > li").evaluateAll((els) => els.map((e) => (e.classList.contains("under") ? "under" : e.textContent.includes("Started here") ? "root" : "other")));
+  ok(order[0] === "root" && order[1] === "under", "straight after it, not at the end");
+  await shot("05a2-thread-under");
+  await go("/thoughts/?view=list");
   await page.getByText("I remember songs by where I was standing.").click();
-  await page.getByRole("button", { name: "Link to another thread" }).click();
+  await page.getByRole("button", { name: /Show it in/ }).click();
   ok(await page.getByRole("checkbox", { name: /On busyness/ }).isDisabled(), "a thread it's already in can't be ticked twice");
   await page.getByRole("checkbox", { name: /On routine and freedom/ }).click();
   await shot("05b-link-sheet");
@@ -244,9 +274,25 @@ try {
 
   console.log("Thoughts screen: tabs, list or cards, pin to a thread");
   await go("/thoughts/");
+  ok(await seen(page.locator(".guide-layer")), "the first time you flip through, a guide shows each swipe");
+  await page.waitForTimeout(700);
+  await shot("05c0-swipe-guide");
+  await page.getByRole("button", { name: "Got it" }).click();
+  ok(!(await page.locator(".guide-layer").count()), "and it goes away once read");
+  ok(await seen(page.locator(".deck-front")), "Thoughts opens as cards");
+  ok((await page.locator(".review-actions .btn.act").count()) === 3, "Discard, Not sure and Keep buttons carry colours and swipe icons");
   ok(await seen(page.getByRole("tab", { name: /Unsorted/ })), "filters are tabs, not buttons");
-  ok(await seen(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Inbox" })), "Inbox is in the bottom bar");
-  ok(await seen(page.locator("header").getByRole("link", { name: "Search" })), "search is an icon at the top");
+  ok(!(await page.getByRole("tab", { name: "Threads" }).count()), "Threads isn't a tab any more; it's in the bottom bar");
+  const navNames = await page.getByRole("navigation", { name: "Main" }).getByRole("link").evaluateAll((els) => els.map((e) => e.getAttribute("aria-label") || e.textContent.trim()));
+  ok(navNames.join(",").startsWith("Home,Threads,") && navNames.slice(-2).join(",") === "Thoughts,Collections", "bottom bar is Home, Threads, +, Thoughts, Collections: " + navNames.join(","));
+  ok(await seen(page.locator("header").getByRole("link", { name: /^Inbox/ })), "Inbox is an icon at the top right");
+  await page.locator("header").getByRole("button", { name: "Search" }).click();
+  ok(await seen(page.locator(".search-sheet")), "search slides in over the screen");
+  await page.waitForTimeout(400);
+  await shot("05c1-search-sheet");
+  await page.keyboard.press("Escape");
+  await page.locator(".search-sheet").waitFor({ state: "detached" });
+  await page.getByRole("button", { name: "Show as a list" }).click();
   const pinCard = page.locator(".thought-wrap", { hasText: "My best mornings" });
   await pinCard.getByRole("button", { name: /thread/ }).click();
   ok(await seen(page.getByRole("heading", { name: /Which thread should this go under/ })), "the pin asks which thread");
@@ -258,6 +304,34 @@ try {
   await shot("05c-thoughts-cards");
   await page.getByRole("button", { name: "Show as a list" }).click();
   await shot("05d-thoughts-list");
+
+  console.log("Threads page: labels, filters, New at the top");
+  await go("/threads/");
+  ok(await seen(page.locator("header").getByRole("button", { name: "Start a new thread" })), "New thread sits at the top right");
+  ok((await page.locator(".thread-home").count()) === 2, "both threads listed");
+  await page.getByRole("button", { name: "Film" }).click();
+  ok((await page.locator(".thread-home").count()) === 1, "a label filters the threads");
+  await shot("05e-threads");
+  await page.getByRole("button", { name: /^All/ }).click();
+  await page.getByLabel("Sort threads").selectOption("oldest");
+  ok((await page.locator(".thread-home strong").first().innerText()) === "On routine and freedom", "sorting oldest first");
+  await page.locator("header").getByRole("button", { name: "Start a new thread" }).click();
+  await page.getByLabel("Name the idea").fill("On rooms");
+  await page.getByRole("button", { name: "Start thread" }).click();
+  await page.waitForURL(/\/thread\//);
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByRole("button", { name: "+ Add label" }).click();
+  await page.getByLabel("New label").fill("Spaces");
+  await page.keyboard.press("Enter");
+  await page.getByRole("button", { name: "Save" }).click();
+  ok(await seen(page.locator(".label-chip", { hasText: "Spaces" })), "labels are added in Edit");
+
+  console.log("Writing timer is offered, not shown");
+  await go("/write/");
+  ok(!(await page.locator(".timer-card").count()), "no timer until you ask for one");
+  ok(await seen(page.getByText(/Getting distracted\?/)), "the offer says what the timer is for");
+  await page.getByRole("button", { name: /Set a timer/ }).click();
+  ok(await seen(page.locator(".timer-card")), "tapping it brings the timer");
 
   console.log("Book and music search");
   await go("/interests/add/?kind=book");
@@ -377,7 +451,14 @@ try {
 
   console.log("Home and export");
   await go("/");
-  ok(await seen(page.getByText("Recently saved")), "Home shows recently saved things");
+  ok(await seen(page.getByText("Recently saved films, books and music")), "Home shows recently saved things, named for what they are");
+  ok((await page.locator(".week-row a, .week-row .strip-day").count()) === 7, "the date row shows one week");
+  await page.getByRole("button", { name: "Previous week" }).click();
+  ok(await seen(page.getByText(/Last week/)), "and can go back a week");
+  await page.getByRole("button", { name: "Next week" }).click();
+  ok(await seen(page.getByRole("heading", { name: "Your threads" })), "Your threads sits on Home");
+  await page.locator(".has-mascot .card-mascot").first().click();
+  ok((await page.locator(".card-mascot.pop").count()) === 1 && new URL(page.url()).pathname === "/", "tapping the mascot makes it pop, and stays on the page");
   ok(await seen(page.getByRole("link", { name: /^Collections, \d+$/ })), "Home has a Collections folder");
   await shot("09-home");
 
@@ -538,7 +619,7 @@ try {
       return out;
     });
   const found = { unnamed: new Set(), small: new Set() };
-  for (const path of ["/", "/thoughts/", "/thoughts/?filter=unsorted&view=cards", "/stack/", "/calendar/", "/interests/", "/interests/?kind=book", "/collections/", "/collection/?id=c1", "/inbox/", "/search/", "/profile/", "/settings/", "/new/", "/threads/", "/discarded/"]) {
+  for (const path of ["/", "/thoughts/", "/thoughts/?filter=unsorted&view=cards", "/stack/", "/calendar/", "/interests/", "/interests/?kind=book", "/collections/", "/collection/?id=c1", "/inbox/", "/search/", "/profile/", "/settings/", "/new/", "/write/", "/threads/", "/thread/?id=sample-thread", "/thought/?id=s5", "/discarded/"]) {
     await go(path);
     await page.waitForTimeout(150);
     const a = await audit();

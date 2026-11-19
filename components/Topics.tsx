@@ -4,7 +4,7 @@ import { topicColour } from "./ThoughtCard";
 import Icon from "./Icon";
 
 /** topic chips with an "Add topic" field that suggests topics you've used before */
-export default function Topics({ value, onChange, known }: { value: string[]; onChange: (t: string[]) => void; known: string[] }) {
+export default function Topics({ value, onChange, known, word = "topic", example = "Cinema" }: { value: string[]; onChange: (t: string[]) => void; known: string[]; word?: string; example?: string }) {
   const [adding, setAdding] = useState(false);
   const [text, setText] = useState("");
   const add = (t: string) => {
@@ -18,20 +18,20 @@ export default function Topics({ value, onChange, known }: { value: string[]; on
     <div className="stack" style={{ gap: 8 }}>
       <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
         {value.map((t) => (
-          <button key={t} type="button" className={"tag " + topicColour(t)} style={{ minHeight: 44, display: "inline-flex", alignItems: "center", gap: 6 }} onClick={() => onChange(value.filter((v) => v !== t))} aria-label={`Remove topic ${t}`}>
+          <button key={t} type="button" className={"tag " + topicColour(t)} style={{ minHeight: 44, display: "inline-flex", alignItems: "center", gap: 6 }} onClick={() => onChange(value.filter((v) => v !== t))} aria-label={`Remove ${word} ${t}`}>
             {t} <Icon name="close" size={12} width={2.6} />
           </button>
         ))}
         {!adding && (
           <button type="button" className="tag" style={{ minHeight: 44, borderStyle: "dashed", background: "transparent", fontWeight: 500 }} onClick={() => setAdding(true)}>
-            + Add topic
+            + Add {word}
           </button>
         )}
       </div>
       {adding && (
         <div className="stack" style={{ gap: 8 }}>
           <form className="row" onSubmit={(e) => (e.preventDefault(), add(text))}>
-            <input className="input" autoFocus placeholder="A topic, like Cinema" value={text} onChange={(e) => setText(e.target.value)} aria-label="New topic" style={{ minHeight: 44 }} />
+            <input className="input" autoFocus placeholder={`A ${word}, like ${example}`} value={text} onChange={(e) => setText(e.target.value)} aria-label={`New ${word}`} style={{ minHeight: 44 }} />
             <button className="btn sm ink">Add</button>
           </form>
           {sugg.length > 0 && (

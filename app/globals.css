@@ -4,6 +4,8 @@
   --ink: #151515;
   --lilac: #c3a6f5;
   --butter: #e6db86;
+  --keep: #b9dfae;
+  --toss: #f3b4a6;
   --blue: #dce4f2;
   --muted: #55534e;
   --on-dark: #d9d6ce;
@@ -133,7 +135,7 @@ h1, h2, h3 { font-weight: 600; margin: 0; }
 /* sheets, dialogs, toasts */
 .scrim { position: fixed; inset: 0; background: rgba(21, 21, 21, 0.55); z-index: 40; }
 .dialog {
-  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(24px + env(safe-area-inset-bottom)); width: min(448px, calc(100% - 32px));
+  position: fixed; left: 16px; right: 16px; margin: 0 auto; bottom: calc(24px + env(safe-area-inset-bottom)); max-width: 448px;
   background: var(--card); border: 1px solid var(--ink); border-radius: 18px; box-shadow: 4px 4px 0 var(--ink);
   padding: 24px 22px 22px; display: flex; flex-direction: column; gap: 12px; z-index: 41;
 }
@@ -427,12 +429,13 @@ body:has(.splash) { background: var(--ink); }
 
 /* swipe cards */
 .swipe { touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: grab; will-change: transform; }
-.swipe.dragging { cursor: grabbing; }
-.swipe.flying { transition: transform 0.28s ease-in, opacity 0.28s ease-in; }
-.swipe.settling { transition: transform 0.25s cubic-bezier(.3, 1.5, .6, 1); }
+.swipe { transition: box-shadow 0.25s ease, scale 0.25s ease; }
+.swipe.dragging { cursor: grabbing; scale: 1.015; box-shadow: 0 14px 30px -12px rgba(21, 21, 21, 0.35); }
+.swipe.flying { transition: transform 0.38s cubic-bezier(0.4, 0, 0.7, 0.3), opacity 0.38s ease-in; }
+.swipe.settling { transition: transform 0.46s cubic-bezier(0.25, 1.25, 0.45, 1), scale 0.3s ease, box-shadow 0.3s ease; }
 .swipe-hint { position: absolute; top: 18px; z-index: 3; font-weight: 700; font-size: 15px; padding: 6px 12px; border: 2px solid var(--ink); border-radius: 10px; background: var(--card); pointer-events: none; }
-.swipe-hint.right { left: 16px; transform: rotate(-8deg); background: var(--lilac); }
-.swipe-hint.left { right: 16px; transform: rotate(8deg); background: var(--butter); }
+.swipe-hint.right { left: 16px; transform: rotate(-8deg); background: var(--keep); }
+.swipe-hint.left { right: 16px; transform: rotate(8deg); background: var(--toss); }
 .swipe-help { text-align: center; margin: 0; }
 .deck .card-mascot, .stack-deck .card-mascot { top: -18px; right: 8px; }
 .stack-deck { padding-top: 40px; }
@@ -536,14 +539,13 @@ button.mood { min-height: 44px; padding: 0 12px; font-size: 12px; }
 .sticker-grid button { min-height: 56px; border: 1px solid var(--ink); border-radius: 12px; background: var(--card); display: flex; align-items: center; justify-content: center; }
 .label-chip { min-height: 44px; padding: 0; border: 0; background: none; }
 .label-chip > span { display: inline-block; font-style: italic; font-weight: 700; font-size: 13px; padding: 6px 12px; border: 1px solid var(--ink); border-radius: 4px; background: var(--card); }
-.search-dark { background: transparent; color: var(--card); border-color: color-mix(in srgb, var(--card) 45%, transparent); }
 .icon-btn.plain { border: 0; background: transparent; }
 
 /* underlined tabs (Thoughts) */
-.tabs { display: flex; gap: 10px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 25%, transparent); overflow-x: auto; scrollbar-width: none; }
-.tab { min-height: 44px; min-width: 44px; justify-content: center; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-size: 14px; font-weight: 500; color: var(--muted); white-space: nowrap; margin-bottom: -1px; border-bottom: 2.5px solid transparent; }
-.tab[aria-selected="true"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--ink); }
-.tab-n { font-size: 11px; font-weight: 600; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--butter); color: var(--ink); display: inline-flex; align-items: center; justify-content: center; }
+.ttabs { display: flex; gap: 10px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 25%, transparent); overflow-x: auto; scrollbar-width: none; }
+.ttab { min-height: 44px; min-width: 44px; justify-content: center; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-size: 14px; font-weight: 500; color: var(--muted); white-space: nowrap; margin-bottom: -1px; border-bottom: 2.5px solid transparent; }
+.ttab[aria-selected="true"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--ink); }
+.ttab-n { font-size: 11px; font-weight: 600; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--butter); color: var(--ink); display: inline-flex; align-items: center; justify-content: center; }
 .viewswitch { display: inline-flex; }
 .viewswitch button { width: 44px; height: 44px; border: 0; padding: 0; background: transparent; display: inline-flex; align-items: center; justify-content: center; color: var(--ink); }
 .viewswitch button > span { width: 44px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--ink); background: var(--card); }
@@ -555,6 +557,146 @@ button.mood { min-height: 44px; padding: 0 12px; font-size: 12px; }
 .pin-btn { position: absolute; right: 4px; top: 4px; width: 44px; height: 44px; border: 0; background: transparent; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; color: var(--ink); }
 .pin-btn i { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--ink); display: inline-flex; align-items: center; justify-content: center; background: var(--card); }
 .pin-btn.on i { background: var(--lilac); }
-.swipe-hint.up { left: 50%; transform: translateX(-50%); background: var(--blue); }
+.swipe-hint.up { left: 50%; transform: translateX(-50%); background: var(--butter); }
 .flip-item { display: flex; flex-direction: column; gap: 10px; padding: 16px; box-shadow: 4px 4px 0 var(--ink); }
 .flip-poster { width: 46%; aspect-ratio: 2 / 3; align-self: center; border-radius: 8px; transform: rotate(-2deg); box-shadow: 3px 3px 0 var(--ink); }
+
+/* ---------- motion and top icons ---------- */
+:root { --ease-paper: cubic-bezier(0.2, 0.9, 0.25, 1.08); --ease-out: cubic-bezier(0.22, 1, 0.36, 1); }
+.top-icon { position: relative; width: 44px; height: 44px; flex: 0 0 44px; }
+.top-icon.on-dark { background: transparent; color: var(--card); border-color: color-mix(in srgb, var(--card) 45%, transparent); }
+.badge-dot { position: absolute; top: 7px; right: 7px; width: 9px; height: 9px; border-radius: 50%; background: var(--lilac); border: 1.5px solid var(--ink); }
+.top-icon.on-dark .badge-dot { border-color: var(--card); }
+.scrim.fade { animation: fade-in 0.22s ease both; }
+.scrim.fade.out { animation: fade-out 0.2s ease both; }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes fade-out { to { opacity: 0; } }
+.search-sheet { position: fixed; top: 0; right: 0; bottom: 0; width: min(100%, 480px); z-index: 45; background: var(--paper); border-left: 1px solid var(--ink); box-shadow: -4px 0 0 var(--ink); padding: calc(20px + env(safe-area-inset-top)) 20px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; animation: slide-in-right 0.32s var(--ease-out) both; }
+.search-sheet.out { animation: slide-out-right 0.22s ease-in both; }
+@keyframes slide-in-right { from { transform: translateX(100%); } }
+@keyframes slide-out-right { to { transform: translateX(100%); } }
+
+/* dialogs rise like a sheet of paper: a little tilt that settles */
+.dialog { animation: paper-up 0.42s var(--ease-paper) both; transform-origin: 50% 100%; }
+@keyframes paper-up { 0% { transform: translateY(60px) rotate(-1.2deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: none; } }
+.scrim { animation: fade-in 0.22s ease both; }
+
+/* buttons: press down, spring back */
+.btn, .chip, .pill > span, .icon-btn, .ttab, .viewswitch button > span, .seg button, .choice, .card-press { transition: transform 0.16s var(--ease-paper), box-shadow 0.16s ease, background-color 0.2s ease, color 0.2s ease; }
+.btn:active:not(:disabled), .icon-btn:active, .pill:active > span, .seg button:active, .choice:active { transform: translate(1px, 1px) scale(0.97); }
+.pop-once { animation: pop-once 0.36s var(--ease-paper); }
+@keyframes pop-once { 0% { transform: scale(1); } 35% { transform: scale(0.88); } 70% { transform: scale(1.08); } 100% { transform: scale(1); } }
+
+/* bottom bar: a pill that slides to the page you are on */
+.nav { isolation: isolate; }
+.nav-pill { position: absolute; top: 50%; height: 44px; margin-top: -22px; border-radius: 12px; background: var(--ink); z-index: -1; transition: left 0.38s var(--ease-paper), width 0.38s var(--ease-paper); }
+.nav a[aria-current="page"] { background: transparent; }
+.nav a { transition: color 0.25s ease; position: relative; }
+.nav a.tapped { animation: pop-once 0.36s var(--ease-paper); }
+.nav a.plus.tapped { animation: plus-pop 0.4s var(--ease-paper); }
+@keyframes plus-pop { 0% { transform: scale(1); } 40% { transform: scale(0.85) rotate(-20deg); } 75% { transform: scale(1.12) rotate(8deg); } 100% { transform: none; } }
+
+/* sliding underline for tabs and a sliding thumb for two-way switches */
+.ttabs { position: relative; }
+.ttab[aria-selected="true"] { border-bottom-color: transparent; }
+.ttabs-line { position: absolute; bottom: 0; height: 2.5px; background: var(--ink); border-radius: 2px; transition: left 0.34s var(--ease-paper), width 0.34s var(--ease-paper); }
+.seg { position: relative; isolation: isolate; }
+.seg-thumb { position: absolute; top: 3px; bottom: 3px; border-radius: 10px; border: 1px solid var(--ink); z-index: -1; transition: left 0.34s var(--ease-paper), width 0.34s var(--ease-paper); background: var(--butter); }
+.seg.wide .seg-thumb { background: var(--ink); }
+.seg.slides button[aria-pressed="true"] { background: transparent; border-color: transparent; }
+.seg.wide.slides button[aria-pressed="true"] { color: var(--card); }
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog, .search-sheet, .scrim, .scrim.fade { animation: none; }
+  .nav-pill, .ttabs-line, .seg-thumb { transition: none; }
+}
+.h-page { font-size: 26px; line-height: 1.05; letter-spacing: -0.02em; }
+.seg button.vs { min-height: 44px; width: 46px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.seg.slides button.vs[aria-pressed="true"] { color: var(--card); }
+.seg.slides:not(.wide):has(.vs) .seg-thumb { background: var(--ink); }
+.pickup.small .pickup-card { flex-basis: 62%; min-height: 92px; padding: 10px 14px 12px; }
+.pickup.small .pickup-card .serif, .pickup.small .pickup-card p { font-size: 15px !important; }
+
+/* Home: one week of dates, your threads, folders that pop */
+.week-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; touch-action: pan-y; animation: week-in 0.34s var(--ease-out) both; }
+@keyframes week-in { from { opacity: 0; transform: translateX(-14px); } }
+.week-row .strip-day { flex: none; width: auto; height: 58px; min-width: 0; }
+.strip-day.future { opacity: 0.35; border-style: dashed; }
+.thread-home { display: flex; gap: 14px; align-items: stretch; text-decoration: none; padding: 14px 16px; border-left: 5px solid var(--lilac); }
+.thread-spine { flex: 0 0 10px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; position: relative; padding: 4px 0; }
+.thread-spine::before { content: ""; position: absolute; top: 6px; bottom: 6px; left: 50%; border-left: 1px dashed var(--ink); }
+.thread-spine i { width: 9px; height: 9px; border-radius: 50%; background: var(--ink); position: relative; }
+.thread-spine i:first-child { background: var(--lilac); border: 1px solid var(--ink); }
+.ftile .sheet { transition: transform 0.3s var(--ease-paper); }
+.ftile:hover .sheet { transform: translateY(-3px) rotate(4deg); }
+.ftile:active .sheet { transform: translateY(-6px) rotate(6deg); }
+.ftile.tapped .sheet { animation: sheet-pop 0.32s var(--ease-paper) both; }
+@keyframes sheet-pop { 0% { transform: none; } 55% { transform: translateY(-14px) rotate(10deg); } 100% { transform: translateY(-10px) rotate(8deg); } }
+.mascot-tap { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.card-mascot.mascot-tap { pointer-events: auto; }
+
+/* deck buttons: coloured to match the swipe they stand in for */
+.btn.act { gap: 6px; padding: 0 10px; font-weight: 600; }
+.btn.act.no { background: var(--toss); }
+.btn.act.maybe { background: var(--butter); }
+.btn.act.yes { background: var(--keep); }
+.swipe-help .link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
+
+/* first-time guide: the screen dims and a little card acts out each swipe */
+.guide-layer { position: fixed; inset: 0; z-index: 60; background: rgba(21, 21, 21, 0.62); display: grid; place-items: center; padding: 16px; animation: fade-in 0.22s ease both; }
+.guide-box { width: min(100%, 380px); background: var(--paper); border: 1px solid var(--ink); border-radius: 20px; box-shadow: 4px 4px 0 var(--ink); padding: 22px 16px 18px; display: flex; flex-direction: column; align-items: center; gap: 6px; animation: paper-up 0.42s var(--ease-paper) both; }
+.guide-title { font-size: 18px; font-weight: 600; }
+.guide-stage { position: relative; width: 100%; height: 250px; margin: 8px 0 10px; }
+.guide-card { position: absolute; left: 50%; top: 92px; width: 92px; height: 120px; margin-left: -46px; background: var(--card); border: 1.5px solid var(--ink); border-radius: 10px; box-shadow: 3px 3px 0 var(--ink); display: flex; flex-direction: column; gap: 9px; padding: 22px 14px; animation: sg-demo 4.8s var(--ease-paper) 0.5s infinite; }
+.guide-card i { display: block; height: 2px; background: var(--rule); }
+.guide-card i:last-child { width: 60%; }
+@keyframes sg-demo {
+  0%, 8%, 30%, 38%, 60%, 68%, 92%, 100% { transform: none; }
+  16%, 22% { transform: translateX(-34px) rotate(-8deg); }
+  46%, 52% { transform: translateY(-30px); }
+  76%, 84% { transform: translateX(34px) rotate(8deg); }
+}
+.sg { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 8px; width: 104px; text-align: center; border: 1.5px solid var(--ink); border-radius: 12px; box-shadow: 2px 2px 0 var(--ink); font-size: 13px; z-index: 1; animation: paper-up 0.42s var(--ease-paper) both; }
+.sg small { font-size: 11.5px; color: var(--muted); line-height: 1.25; }
+.sg-up { top: 0; left: 50%; margin-left: -52px; width: 104px; background: var(--butter); animation-delay: 0.1s; }
+.sg-left { left: 0; top: 128px; background: var(--toss); animation-delay: 0.2s; }
+.sg-right { right: 0; top: 128px; background: var(--keep); animation-delay: 0.3s; }
+@media (prefers-reduced-motion: reduce) { .guide-card, .sg, .guide-box, .guide-layer { animation: none !important; } }
+
+/* writing timer: offered, not shown */
+.timer-offer { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; background: transparent; border: 1px dashed var(--ink); border-radius: 14px; font: inherit; color: inherit; cursor: pointer; min-height: 44px; }
+.timer-offer strong { font-size: 14px; font-weight: 600; }
+.timer-offer-ic { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 50%; background: var(--butter); border: 1px solid var(--ink); display: grid; place-items: center; }
+.timer-card { animation: paper-up 0.42s var(--ease-paper) both; }
+
+/* thread timeline: a thought linked under another sits indented beneath it */
+.timeline li.under { margin-left: 26px; }
+.timeline li.under .tl-dot { width: 9px; height: 9px; margin: 18px 0 0 1.5px; }
+.timeline li.under::after { content: ""; position: absolute; left: -20px; top: -12px; width: 22px; height: 34px; border-left: 1px dashed var(--ink); border-bottom: 1px dashed var(--ink); border-bottom-left-radius: 10px; }
+.tl-linkhere { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: -6px 0 -12px -2px; padding: 0 4px; background: none; border: 0; font: inherit; font-size: 12.5px; font-weight: 500; color: var(--muted); cursor: pointer; }
+.tl-linkhere:hover { color: var(--ink); }
+.label-chip { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; margin: -8px 0; text-decoration: none; color: var(--ink); }
+.label-chip > span { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 13px; border: 1px solid var(--ink); background: var(--blue); font-size: 12px; font-weight: 500; }
+
+/* threads page */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.new-pill { min-height: 44px; min-width: 44px; padding: 0 0 0 4px; border: 0; background: none; font: inherit; color: inherit; display: inline-flex; align-items: center; cursor: pointer; }
+.new-pill > span { height: 34px; padding: 0 12px 0 9px; display: inline-flex; align-items: center; gap: 4px; border-radius: 17px; background: var(--ink); color: var(--card); font-size: 13px; font-weight: 600; transition: transform 0.16s var(--ease-paper); }
+.new-pill:active > span { transform: scale(0.95); }
+.pill-gap { flex: 0 0 1px; align-self: center; height: 20px; background: var(--rule); margin: 0 4px; }
+.pill.label > span { border-style: dashed; }
+.pill.label[aria-pressed="true"] > span { border-style: solid; background: var(--blue); color: var(--ink); }
+.sort-pick { position: relative; display: inline-flex; align-items: center; min-height: 44px; }
+.sort-pick select { appearance: none; -webkit-appearance: none; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); padding: 0 18px 0 6px; min-height: 44px; cursor: pointer; }
+.sort-pick .caret { position: absolute; right: 4px; top: 50%; width: 7px; height: 7px; margin-top: -6px; border-right: 1.5px solid var(--ink); border-bottom: 1.5px solid var(--ink); transform: rotate(45deg); pointer-events: none; }
+.label-mini { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 10px; background: var(--blue); border: 1px solid var(--rule); }
+.tag.sm { font-size: 11px; padding: 2px 8px; border-radius: 7px; flex: 0 0 auto; }
+
+/* words in a thought linked to a collection or a saved thing */
+.word-link { color: inherit; text-decoration: underline; text-decoration-color: var(--lilac); text-decoration-thickness: 3px; text-underline-offset: 3px; background: color-mix(in srgb, var(--lilac) 18%, transparent); border-radius: 3px; }
+.word-chip { display: inline-flex; align-items: center; height: 30px; padding-left: 10px; border: 1px solid var(--ink); border-radius: 15px; background: var(--card); font-size: 12px; max-width: 100%; }
+.word-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.word-chip button { width: 44px; height: 44px; margin: -7px -8px -7px -6px; border: 0; background: none; display: grid; place-items: center; color: inherit; cursor: pointer; }
+.word-bar { position: fixed; left: 12px; right: 12px; bottom: calc(14px + env(safe-area-inset-bottom)); max-width: 456px; margin: 0 auto; z-index: 30; display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; background: var(--card); border: 1px solid var(--ink); border-radius: 16px; box-shadow: 3px 3px 0 var(--ink); animation: paper-up 0.36s var(--ease-paper) both; }
+.word-bar .btn { gap: 6px; flex: 0 0 auto; }
+.coll-thumb { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 8px; border: 1px solid var(--ink); background: linear-gradient(135deg, var(--lilac) 0 50%, var(--butter) 50%); }

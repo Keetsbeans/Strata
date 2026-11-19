@@ -16,11 +16,14 @@ type Props = {
   onLean?: (lean: number) => void;
 };
 
-const FAR = 90; // how far (px) a card must travel to count as a swipe
+const FAR = 110; // how far (px) the card itself must travel to count as a swipe
+const WEIGHT = 0.72; // the card trails the finger a little, so it feels like moving something with some weight
+const FLICK = 0.9; // px per ms: a quick flick counts even if it didn't travel all the way
 
 /** A card you can fling left or right with a finger. Buttons inside it still work as normal. */
 export default function SwipeCard({ children, className = "", label, onLeft, onRight, onUp, upHint, leftHint, rightHint, onLean }: Props) {
   const start = useRef<{ x: number; y: number; id: number } | null>(null);
+  const last = useRef({ x: 0, y: 0, t: 0, vx: 0, vy: 0 });
   const [dx, setDx] = useState(0);
   const [dy, setDy] = useState(0);
   const axis = useRef<"x" | "y">("x");
@@ -31,17 +34,21 @@ export default function SwipeCard({ children, className = "", label, onLeft, onR
   const down = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest("input, textarea, button, a, select, [contenteditable]")) return;
     start.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    last.current = { x: e.clientX, y: e.clientY, t: e.timeStamp, vx: 0, vy: 0 };
   };
   const move = (e: React.PointerEvent) => {
     const s = start.current;
     if (!s || s.id !== e.pointerId) return;
-    const x = e.clientX - s.x;
-    const y = e.clientY - s.y;
+    const x = (e.clientX - s.x) * WEIGHT;
+    const y = (e.clientY - s.y) * WEIGHT;
+    const l = last.current;
+    const dt = Math.max(1, e.timeStamp - l.t);
+    last.current = { x: e.clientX, y: e.clientY, t: e.timeStamp, vx: (e.clientX - l.x) / dt, vy: (e.clientY - l.y) / dt };
     if (state !== "dragging") {
-      if (onUp && y < -8 && Math.abs(y) > Math.abs(x)) {
+      if (onUp && y < -6 && Math.abs(y) > Math.abs(x)) {
         axis.current = "y";
       } else {
-        if (Math.abs(x) < 8 || Math.abs(x) < Math.abs(y)) return; // let the page scroll
+        if (Math.abs(x) < 6 || Math.abs(x) < Math.abs(y)) return; // let the page scroll
         axis.current = "x";
       }
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -56,37 +63,40 @@ export default function SwipeCard({ children, className = "", label, onLeft, onR
     if (!start.current) return;
     start.current = null;
     if (state !== "dragging") return;
+    const { vx, vy } = last.current;
     if (axis.current === "y") {
-      if (dy < -FAR && onUp) {
+      if ((dy < -FAR || (dy < -FAR / 2 && vy < -FLICK)) && onUp) {
         setState("flying");
         setDy(-700);
         setTimeout(() => {
           onUp();
           setDy(0);
           setState("");
-        }, 260);
+        }, 380);
       } else {
         setState("settling");
         setDy(0);
-        setTimeout(() => setState(""), 260);
+        setTimeout(() => setState(""), 460);
       }
       return;
     }
-    const go = dx > FAR ? onRight : dx < -FAR ? onLeft : undefined;
+    const right = dx > FAR || (dx > FAR / 2 && vx > FLICK);
+    const left = dx < -FAR || (dx < -FAR / 2 && vx < -FLICK);
+    const go = right ? onRight : left ? onLeft : undefined;
     if (go) {
       setState("flying");
-      setDx(dx > 0 ? 520 : -520);
+      setDx(dx > 0 ? 560 : -560);
       setTimeout(() => {
         go();
         onLean?.(0);
         setDx(0);
         setState("");
-      }, 260);
+      }, 380);
     } else {
       setState("settling");
       setDx(0);
       onLean?.(0);
-      setTimeout(() => setState(""), 260);
+      setTimeout(() => setState(""), 460);
     }
   };
 
@@ -95,7 +105,7 @@ export default function SwipeCard({ children, className = "", label, onLeft, onR
     <article
       className={`swipe ${state} ${className}`}
       aria-label={label}
-      style={{ transform: dy ? `translateY(${dy}px) scale(${1 + dy / 3000})` : dx ? `translateX(${dx}px) rotate(${dx / 18}deg)` : undefined, opacity: state === "flying" ? 0 : 1, touchAction: onUp ? "none" : undefined }}
+      style={{ transform: dy ? `translateY(${dy}px) scale(${1 + dy / 3000})` : dx ? `translateX(${dx}px) rotate(${dx / 28}deg)` : undefined, opacity: state === "flying" ? 0 : 1, touchAction: onUp ? "none" : undefined }}
       onPointerDown={down}
       onPointerMove={move}
       onPointerUp={up}

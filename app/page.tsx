@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "./providers";
 import { useData } from "@/lib/useData";
 import { DAYS, MONTHS_LONG, sameDay, stamp, relDay } from "@/lib/dates";
@@ -11,6 +11,7 @@ import Avatar from "@/components/Avatar";
 import { preview } from "@/components/ThoughtCard";
 import Poster from "@/components/Poster";
 import Folder from "@/components/Folder";
+import TopIcons from "@/components/TopIcons";
 import { comingBack } from "@/lib/inbox";
 import { introSeen, markIntro } from "@/lib/intro";
 import Onboarding from "@/components/Onboarding";
@@ -36,15 +37,19 @@ export default function Home() {
   const now = useMemo(() => new Date(), []);
   const [hello, when] = greeting(now);
 
+  // one week at a time, Monday to Sunday; arrows (or a swipe) go back a week
+  const [week, setWeek] = useState(0);
+  const swipe = useRef<number | null>(null);
   const days = useMemo(() => {
-    const out: Date[] = [];
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - i);
-      out.push(d);
-    }
-    return out;
-  }, [now]);
+    const monday = new Date(now);
+    monday.setHours(12, 0, 0, 0);
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7) + week * 7);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return d;
+    });
+  }, [now, week]);
 
   if (intro) return <Onboarding onDone={() => (markIntro(true), setIntro(false))} />;
   if (error) return <main className="screen"><p className="error">{error}</p><Nav /></main>;
@@ -69,9 +74,7 @@ export default function Home() {
         <div className="between">
           <span style={{ fontSize: 15, color: "var(--on-dark)" }}>{first ? "Welcome" : hello}</span>
           <span className="row" style={{ gap: 8 }}>
-            <Link href="/search/" className="icon-btn round search-dark" aria-label="Search">
-              <Icon name="search" size={20} />
-            </Link>
+            <TopIcons dark />
             <Link href="/profile/" className="profile-btn" aria-label="Your profile">
               <Avatar size={44} />
             </Link>
@@ -135,33 +138,85 @@ export default function Home() {
           </>
         )}
 
-        <section className="stack week" style={{ gap: 8 }} aria-label="This month">
-        <div className="between" style={{ marginBottom: 10 }}>
-          <Link href="/calendar/" className="month-link">
-            <Icon name="calendar" size={16} /> {MONTHS_LONG[now.getMonth()]} {now.getFullYear()}
-          </Link>
-          <span className="small muted">
-            {todayCount} {todayCount === 1 ? "thought" : "thoughts"} today
-          </span>
-        </div>
-        <div className="strip" ref={(el) => {
-            if (el) el.scrollLeft = el.scrollWidth;
-          }}>
-          {days.map((d) => {
-            const has = finished.some((t) => sameDay(new Date(t.created_at), d));
-            const today = sameDay(d, now);
-            const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-            return (
-              <Link key={iso} href={`/calendar/?d=${iso}`} className={"strip-day" + (today ? " today" : "")} aria-label={`${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS_LONG[d.getMonth()]}${has ? ", has thoughts" : ""}`}>
-                <span style={{ fontSize: 11, fontWeight: 500 }}>{DAYS[d.getDay()]}</span>
-                <span style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.1 }}>{d.getDate()}</span>
-                <span className="strip-dot" style={{ visibility: has ? "visible" : "hidden" }} />
-              </Link>
-            );
-          })}
-        </div>
-          <p className="small muted" style={{ margin: 0 }}>Dots mark days you wrote. Tap a day to see it.</p>
+        <section className="stack week" style={{ gap: 8 }} aria-label="This week">
+          <div className="between">
+            <Link href="/calendar/" className="month-link">
+              <Icon name="calendar" size={16} /> {MONTHS_LONG[days[3].getMonth()]} {days[3].getFullYear()}
+            </Link>
+            <span className="row" style={{ gap: 2 }}>
+              <button className="icon-btn plain" aria-label="Previous week" onClick={() => setWeek(week - 1)}>
+                <Icon name="back" size={18} />
+              </button>
+              <button className="icon-btn plain" aria-label="Next week" disabled={week >= 0} style={{ opacity: week >= 0 ? 0.3 : 1 }} onClick={() => setWeek(Math.min(0, week + 1))}>
+                <span style={{ display: "inline-flex", transform: "rotate(180deg)" }}><Icon name="back" size={18} /></span>
+              </button>
+            </span>
+          </div>
+          <div
+            className="week-row"
+            key={week}
+            onPointerDown={(e) => (swipe.current = e.clientX)}
+            onPointerUp={(e) => {
+              if (swipe.current === null) return;
+              const dx = e.clientX - swipe.current;
+              swipe.current = null;
+              if (dx > 50) setWeek(week - 1);
+              else if (dx < -50 && week < 0) setWeek(week + 1);
+            }}
+          >
+            {days.map((d) => {
+              const has = finished.some((t) => sameDay(new Date(t.created_at), d));
+              const today = sameDay(d, now);
+              const future = d > now && !today;
+              const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+              const inner = (
+                <>
+                  <span style={{ fontSize: 11, fontWeight: 500 }}>{DAYS[d.getDay()]}</span>
+                  <span style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.1 }}>{d.getDate()}</span>
+                  <span className="strip-dot" style={{ visibility: has ? "visible" : "hidden" }} />
+                </>
+              );
+              return future ? (
+                <span key={iso} className="strip-day future" aria-hidden="true">{inner}</span>
+              ) : (
+                <Link key={iso} href={`/calendar/?d=${iso}`} className={"strip-day" + (today ? " today" : "")} aria-label={`${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS_LONG[d.getMonth()]}${has ? ", has thoughts" : ""}`}>
+                  {inner}
+                </Link>
+              );
+            })}
+          </div>
+          <p className="small muted" style={{ margin: 0 }}>
+            {week === 0 ? `This week · ${todayCount} ${todayCount === 1 ? "thought" : "thoughts"} today` : week === -1 ? "Last week" : `${-week} weeks ago`} · dots mark days you wrote
+          </p>
         </section>
+
+        {threads.length > 0 && (
+          <section className="stack" style={{ gap: 10 }}>
+            <div className="between">
+              <h2 style={{ fontSize: 17 }}>Your threads</h2>
+              <Link href="/threads/" className="link" style={{ fontSize: 13 }}>
+                See all {threads.length}
+              </Link>
+            </div>
+            {threads.slice(0, 3).map((th) => {
+              const last = latestOf(th.id);
+              const n = finished.filter((t) => t.thread_id === th.id).length;
+              return (
+                <Link key={th.id} href={`/thread/?id=${th.id}`} className="card thread-home">
+                  <span className="thread-spine" aria-hidden="true"><i /><i /><i /></span>
+                  <span className="stack grow" style={{ gap: 3, minWidth: 0 }}>
+                    <strong style={{ fontSize: 16, fontWeight: 600 }}>{th.title}</strong>
+                    {last && <span className="serif clamp2" style={{ fontSize: 15, lineHeight: 1.3 }}>“{preview(last.body, 90)}”</span>}
+                    <span className="small muted">
+                      {n} {n === 1 ? "thought" : "thoughts"}
+                      {last ? " · latest " + relDay(last.created_at) : ""}
+                    </span>
+                  </span>
+                </Link>
+              );
+            })}
+          </section>
+        )}
 
         <section className="stack" style={{ gap: 10 }}>
           <h2 style={{ fontSize: 17 }}>Your folders</h2>
@@ -187,12 +242,12 @@ export default function Home() {
         {recentItems.length > 0 && (
           <section className="stack" style={{ gap: 10 }}>
             <div className="between">
-              <h2 style={{ fontSize: 17 }}>Recently saved</h2>
+              <h2 style={{ fontSize: 17 }}>Recently saved films, books and music</h2>
               <Link href="/interests/" className="link" style={{ fontSize: 13 }}>
                 See all
               </Link>
             </div>
-            <p className="small muted" style={{ margin: "-4px 0 0" }}>Films, books, music and articles you saved. Tap one to see the thoughts you pinned to it and what it connects to.</p>
+            <p className="small muted" style={{ margin: "-4px 0 0" }}>The last things you added to Saved. Tap one to see your thoughts on it.</p>
             <div className="pickup" style={{ gap: 12 }}>
               {recentItems.map((i) => (
                 <Link key={i.id} href={`/interest/?id=${i.id}`} className="shelf-item" style={{ flex: "0 0 104px" }}>
@@ -202,30 +257,6 @@ export default function Home() {
                 </Link>
               ))}
             </div>
-          </section>
-        )}
-
-        {threads.length > 0 && (
-          <section className="stack" style={{ gap: 10 }}>
-            <div className="between">
-              <h2 style={{ fontSize: 17 }}>Threads you are following</h2>
-              <Link href="/threads/" className="link" style={{ fontSize: 13 }}>
-                See all
-              </Link>
-            </div>
-            {threads.slice(0, 3).map((th) => {
-              const last = latestOf(th.id);
-              const n = finished.filter((t) => t.thread_id === th.id).length;
-              return (
-                <Link key={th.id} href={`/thread/?id=${th.id}`} className="card stack" style={{ gap: 2, textDecoration: "none" }}>
-                  <strong style={{ fontSize: 16, fontWeight: 600 }}>{th.title}</strong>
-                  <span className="small muted">
-                    {n} {n === 1 ? "thought" : "thoughts"}
-                    {last ? " · last added " + relDay(last.created_at) : ""}
-                  </span>
-                </Link>
-              );
-            })}
           </section>
         )}
 
