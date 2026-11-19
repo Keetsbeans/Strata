@@ -25,6 +25,8 @@ function Write() {
   const [known, setKnown] = useState<string[]>([]);
   const [threadTitle, setThreadTitle] = useState<string | null>(null);
   const [threadId, setThreadId] = useState<string | null>(threadParam);
+  const [interestId, setInterestId] = useState<string | null>(q.get("interest"));
+  const [interestTitle, setInterestTitle] = useState<string | null>(null);
   const [wasFinished, setWasFinished] = useState(false);
   const [loaded, setLoaded] = useState(!id);
   const [leaving, setLeaving] = useState(false);
@@ -45,6 +47,7 @@ function Write() {
         setTopics(t.topics);
         setKind(t.kind);
         setThreadId(t.thread_id);
+        setInterestId(t.interest_id ?? null);
         setWasFinished(t.finished);
         setLoaded(true);
       });
@@ -53,6 +56,9 @@ function Write() {
   useEffect(() => {
     if (threadId) store.thread(threadId).then((t) => setThreadTitle(t?.title ?? null));
   }, [threadId, store]);
+  useEffect(() => {
+    if (interestId) store.interest(interestId).then((t) => setInterestTitle(t?.title ?? null));
+  }, [interestId, store]);
 
   // grow the card's writing area with the text
   useEffect(() => {
@@ -71,10 +77,11 @@ function Write() {
     setBusy(true);
     setError("");
     try {
-      const patch = { body: body.trim(), topics, kind, finished, thread_id: threadId };
+      const patch = { body: body.trim(), topics, kind, finished, thread_id: threadId, interest_id: interestId };
       const t = id ? await store.updateThought(id, patch) : await store.addThought(patch);
       setOriginal(body);
       if (!finished) router.replace("/");
+      else if (interestId && !id) router.replace(`/interest/?id=${interestId}`);
       else if (threadId && !id) router.replace(`/thread/?id=${threadId}`);
       else router.replace(`/thought/?id=${t.id}`);
     } catch (e) {
@@ -106,7 +113,10 @@ function Write() {
         <span>
           {day(now)} · {time(now)}
         </span>
-        {threadTitle && <span className="tag">Thread: {threadTitle}</span>}
+        <span className="row" style={{ gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          {interestTitle && <span className="tag lilac">About: {interestTitle}</span>}
+          {threadTitle && <span className="tag">Thread: {threadTitle}</span>}
+        </span>
       </div>
 
       <div className={kind === "card" ? "card write-card" : "write-page"}>

@@ -1,6 +1,6 @@
 // Strata service worker: keeps the app's own files so it opens without a connection.
 // Your thoughts are never stored here; they come from your account each time.
-const CACHE = "strata-v2";
+const CACHE = "strata-v3";
 self.addEventListener("install", (e) => self.skipWaiting());
 self.addEventListener("activate", (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));

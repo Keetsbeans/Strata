@@ -8,6 +8,8 @@ import Nav from "@/components/Nav";
 import Mascot from "@/components/Mascot";
 import Icon from "@/components/Icon";
 import { preview } from "@/components/ThoughtCard";
+import Poster from "@/components/Poster";
+import { comingBack } from "@/lib/inbox";
 
 function greeting(d: Date) {
   const h = d.getHours();
@@ -20,8 +22,8 @@ function greeting(d: Date) {
 export default function Home() {
   const { store } = useApp();
   const { data, error } = useData(async () => {
-    const [thoughts, threads] = await Promise.all([store.thoughts(), store.threads()]);
-    return { thoughts, threads };
+    const [thoughts, threads, interests, collections, links] = await Promise.all([store.thoughts(), store.threads(), store.interests(), store.collections(), store.links()]);
+    return { thoughts, threads, interests, collections, links };
   }, [store]);
   const [hideLast, setHideLast] = useState(false);
   const now = useMemo(() => new Date(), []);
@@ -40,7 +42,9 @@ export default function Home() {
   if (error) return <main className="screen"><p className="error">{error}</p><Nav /></main>;
   if (!data) return <main className="screen"><Nav /></main>;
 
-  const { thoughts, threads } = data;
+  const { thoughts, threads, interests, collections, links } = data;
+  const back = comingBack(thoughts, interests, now);
+  const recentItems = interests.slice(0, 6);
   const finished = thoughts.filter((t) => t.finished);
   const drafts = thoughts.filter((t) => !t.finished).sort((a, b) => b.updated_at.localeCompare(a.updated_at));
   const unsorted = finished.filter((t) => !t.topics.length && !t.kept);
@@ -156,10 +160,45 @@ export default function Home() {
             </Link>
             <Link href="/interests/" className="folder">
               <span>Interests</span>
-              <b className="muted" style={{ fontSize: 12, fontWeight: 500 }}>soon</b>
+              <b>{interests.length}</b>
+            </Link>
+            <Link href="/collections/" className="folder">
+              <span>Collections</span>
+              <b>{collections.length}</b>
+            </Link>
+            <Link href="/inbox/" className="folder">
+              <span>Inbox</span>
+              <b>{back.yearAgo.length + back.waiting.length + links.length}</b>
             </Link>
           </div>
         </section>
+
+        {back.yearAgo.length > 0 && (
+          <Link href="/inbox/" className="card back-card" style={{ textDecoration: "none", boxShadow: "3px 3px 0 var(--butter)" }}>
+            <strong style={{ fontWeight: 600 }}>Coming back to you</strong>
+            <p className="serif">“{preview(back.yearAgo[0].body, 110)}”</p>
+            <span className="small muted">Written on this day in {new Date(back.yearAgo[0].created_at).getFullYear()}</span>
+          </Link>
+        )}
+
+        {recentItems.length > 0 && (
+          <section className="stack" style={{ gap: 10 }}>
+            <div className="between">
+              <h2 style={{ fontSize: 17 }}>Recent interests</h2>
+              <Link href="/interests/" className="link" style={{ fontSize: 13 }}>
+                See all
+              </Link>
+            </div>
+            <div className="pickup" style={{ gap: 12 }}>
+              {recentItems.map((i) => (
+                <Link key={i.id} href={`/interest/?id=${i.id}`} className="shelf-item" style={{ flex: "0 0 104px" }}>
+                  <Poster src={i.image_url} title={i.title} kind={i.kind} />
+                  <span className="small" style={{ fontWeight: 600, lineHeight: 1.2 }}>{i.title}</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         {threads.length > 0 && (
           <section className="stack" style={{ gap: 10 }}>

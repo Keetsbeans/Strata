@@ -14,6 +14,7 @@ const P: Record<string, string> = {
   download: "M12 4v11M7 10l5 5 5-5M5 20h14",
   mic: "M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3M9 21h6",
   stop: "M8 8h8v8H8z",
+  link: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1",
 };
 
 export default function Icon({ name, size = 20, color = "currentColor", width = 2.2 }: { name: keyof typeof P | string; size?: number; color?: string; width?: number }) {
