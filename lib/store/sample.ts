@@ -1,4 +1,4 @@
-import type { Collection, CollectionItem, Interest, SavedLink, Thought, Thread } from "@/lib/types";
+import type { Collection, CollectionItem, ImportBatch, Interest, SavedLink, Thought, Thread, ThreadLink } from "@/lib/types";
 
 /** A few example thoughts so the try-out mode doesn't open empty. */
 export function sampleData() {
@@ -10,7 +10,7 @@ export function sampleData() {
     const latest = Date.now() - (days + 1) * 3600000;
     return new Date(Math.min(d.getTime(), latest)).toISOString();
   };
-  const thread: Thread = { id: "sample-thread", title: "On routine and freedom", state: "ongoing", created_at: ago(9, 22, 30), discarded_at: null, released_ids: [] };
+  const thread: Thread = { id: "sample-thread", title: "On routine and freedom", state: "ongoing", created_at: ago(9, 22, 30), discarded_at: null, released_ids: [], root_id: "s1", note: "Started from a film. Does doing the same thing every day make you freer?" };
   const t = (id: string, body: string, topics: string[], when: string, extra: Partial<Thought> = {}): Thought => ({
     id,
     body,
@@ -46,14 +46,16 @@ export function sampleData() {
   ];
   const collections: Collection[] = [
     { id: "c1", title: "Films that stayed with me", note: "The ones I still think about weeks later.", created_at: ago(8, 21, 0), updated_at: ago(1, 21, 0) },
+    { id: "c2", title: "For a rainy Sunday", note: "", created_at: ago(7, 10, 0), updated_at: ago(7, 10, 0) },
   ];
   const collectionItems: CollectionItem[] = [
     { id: "ci1", collection_id: "c1", interest_id: "i1", thought_id: null, added_at: ago(8, 21, 0) },
-    { id: "ci2", collection_id: "c1", interest_id: null, thought_id: "s3", added_at: ago(0, 9, 20) },
+    { id: "ci2", collection_id: "c1", interest_id: "i2", thought_id: null, added_at: ago(0, 9, 20) },
+    { id: "ci4", collection_id: "c2", interest_id: "i4", thought_id: null, added_at: ago(7, 10, 0) },
     { id: "ci3", collection_id: "c1", interest_id: "i3", thought_id: null, added_at: ago(1, 21, 0) },
   ];
   const links: SavedLink[] = [
     { id: "l1", url: "https://en.wikipedia.org/wiki/Slow_living", title: "Slow living - Wikipedia", note: "", created_at: ago(1, 18, 0) },
   ];
-  return { thoughts, threads: [thread], versions: [], interests, collections, collectionItems, links };
+  return { thoughts, threads: [thread], versions: [], interests, collections, collectionItems, links, threadLinks: [{ id: "sl1", thread_id: thread.id, thought_id: "s5", added_at: ago(3, 10, 0) }] as ThreadLink[], imports: [] as ImportBatch[] };
 }

@@ -404,3 +404,50 @@ language sql security definer set search_path = public, auth as $$
 $$;
 revoke all on function public.delete_my_account() from public, anon;
 grant execute on function public.delete_my_account() to authenticated;
+
+-- ---------- the revised structure (threads under a thought, collections as boards, imports) ----------
+-- threads grow from one thought, and can say what they follow
+alter table public.threads add column if not exists root_id uuid references public.thoughts (id) on delete set null;
+alter table public.threads add column if not exists note text not null default '' check (char_length(note) <= 2000);
+
+-- a thought shown inside another thought's thread: a link, never a copy
+create table if not exists public.thread_links (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  thread_id uuid not null references public.threads (id) on delete cascade,
+  thought_id uuid not null references public.thoughts (id) on delete cascade,
+  added_at timestamptz not null default now(),
+  unique (thread_id, thought_id)
+);
+create index if not exists thread_links_thought on public.thread_links (thought_id);
+alter table public.thread_links enable row level security;
+drop policy if exists "own thread links" on public.thread_links;
+create policy "own thread links" on public.thread_links for all to authenticated
+  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+
+-- collections hold saved things only, have a cover, and remember where things sit on the board
+delete from public.collection_items where thought_id is not null;
+alter table public.collections add column if not exists cover_id uuid references public.interests (id) on delete set null;
+alter table public.collections add column if not exists decor jsonb not null default '[]' check (jsonb_typeof(decor) = 'array' and jsonb_array_length(decor) <= 200);
+alter table public.collection_items add column if not exists x real;
+alter table public.collection_items add column if not exists y real;
+alter table public.collection_items add column if not exists r real;
+alter table public.collection_items add column if not exists z integer;
+
+-- each import is one line in Inbox until it is sorted
+create table if not exists public.imports (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  source text not null check (source in ('letterboxd', 'goodreads')),
+  count integer not null default 0,
+  created_at timestamptz not null default now(),
+  done_at timestamptz
+);
+alter table public.imports enable row level security;
+drop policy if exists "own imports" on public.imports;
+create policy "own imports" on public.imports for all to authenticated
+  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+alter table public.interests add column if not exists import_id uuid references public.imports (id) on delete set null;
+
+revoke all on public.thread_links, public.imports from anon;
+grant select, insert, update, delete on public.thread_links, public.imports to authenticated;

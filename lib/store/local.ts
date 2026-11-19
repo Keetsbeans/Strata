@@ -1,4 +1,4 @@
-import type { Collection, CollectionItem, Interest, SavedLink, Thought, ThoughtVersion, Thread } from "@/lib/types";
+import type { Collection, CollectionItem, Decor, ImportBatch, Interest, Placement, SavedLink, Thought, ThoughtVersion, Thread, ThreadLink } from "@/lib/types";
 import { DISCARD_DAYS } from "@/lib/types";
 import type { ImportResult, InterestPatch, NewInterest, NewThought, ShelfImport, Store, ThoughtPatch } from "./types";
 import { sampleData } from "./sample";
@@ -14,6 +14,8 @@ type DB = {
   collections: Collection[];
   collectionItems: CollectionItem[];
   links: SavedLink[];
+  threadLinks: ThreadLink[];
+  imports: ImportBatch[];
 };
 const KEY = "strata:try:v1";
 
@@ -26,8 +28,10 @@ function load(): DB {
     const raw = localStorage.getItem(KEY);
     // try-outs started before stage 2 have no interests, collections or links yet
     if (raw) {
-      const db = { interests: [], collections: [], collectionItems: [], links: [], ...JSON.parse(raw) };
+      const db: DB = { interests: [], collections: [], collectionItems: [], links: [], threadLinks: [], imports: [], ...JSON.parse(raw) };
       db.interests = db.interests.map((i: Interest) => ({ ...i, genres: i.genres ?? [] }));
+      // collections now hold saved things only; thoughts that sat in one stay where they are
+      db.collectionItems = db.collectionItems.filter((x) => x.interest_id);
       return db;
     }
   } catch {}
@@ -139,6 +143,8 @@ export class LocalStore implements Store {
     this.db.thoughts = this.db.thoughts.filter((t) => !ids.includes(t.id));
     this.db.versions = this.db.versions.filter((v) => !ids.includes(v.thought_id));
     this.db.collectionItems = this.db.collectionItems.filter((x) => !x.thought_id || !ids.includes(x.thought_id));
+    this.db.threadLinks = this.db.threadLinks.filter((x) => !ids.includes(x.thought_id));
+    for (const t of this.db.threads) if (t.root_id && ids.includes(t.root_id)) t.root_id = null;
     this.write();
   }
 
@@ -149,12 +155,37 @@ export class LocalStore implements Store {
     return this.db.threads.find((t) => t.id === id) ?? null;
   }
   async addThread(title: string) {
-    const t: Thread = { id: uid(), title, state: "ongoing", created_at: now(), discarded_at: null, released_ids: [] };
+    const t: Thread = { id: uid(), title, state: "ongoing", created_at: now(), discarded_at: null, released_ids: [], root_id: null, note: "" };
     this.db.threads.push(t);
     this.write();
     return t;
   }
-  async updateThread(id: string, patch: { title?: string; state?: Thread["state"] }) {
+  async startThread(thoughtId: string, title: string, note = "") {
+    const th = this.db.thoughts.find((x) => x.id === thoughtId);
+    if (!th) throw new Error("That thought no longer exists.");
+    const t: Thread = { id: uid(), title, state: "ongoing", created_at: now(), discarded_at: null, released_ids: [], root_id: thoughtId, note };
+    this.db.threads.push(t);
+    th.thread_id = t.id;
+    this.write();
+    return t;
+  }
+  async threadLinks() {
+    const live = new Set(this.db.threads.filter((t) => !t.discarded_at).map((t) => t.id));
+    return this.db.threadLinks.filter((x) => live.has(x.thread_id));
+  }
+  async linkToThreads(thoughtId: string, threadIds: string[]) {
+    for (const thread_id of threadIds) {
+      if (this.db.threadLinks.some((x) => x.thread_id === thread_id && x.thought_id === thoughtId)) continue;
+      if (this.db.thoughts.some((x) => x.id === thoughtId && x.thread_id === thread_id)) continue;
+      this.db.threadLinks.push({ id: uid(), thread_id, thought_id: thoughtId, added_at: now() });
+    }
+    this.write();
+  }
+  async unlink(linkId: string) {
+    this.db.threadLinks = this.db.threadLinks.filter((x) => x.id !== linkId);
+    this.write();
+  }
+  async updateThread(id: string, patch: { title?: string; state?: Thread["state"]; note?: string }) {
     const t = this.db.threads.find((x) => x.id === id);
     if (!t) throw new Error("That thread no longer exists.");
     Object.assign(t, patch);
@@ -192,6 +223,7 @@ export class LocalStore implements Store {
     const gone = this.db.thoughts.filter((x) => x.thread_id && ids.includes(x.thread_id) && x.discarded_at).map((x) => x.id);
     await this.deleteThoughtsForever(gone);
     this.db.threads = this.db.threads.filter((t) => !ids.includes(t.id));
+    this.db.threadLinks = this.db.threadLinks.filter((x) => !ids.includes(x.thread_id));
     for (const x of this.db.thoughts) if (x.thread_id && ids.includes(x.thread_id)) x.thread_id = null;
     this.write();
   }
@@ -254,6 +286,7 @@ export class LocalStore implements Store {
   }
   async importShelf(data: ShelfImport): Promise<ImportResult> {
     const res: ImportResult = { added: 0, updated: 0, thoughts: 0 };
+    const batch: ImportBatch = { id: uid(), source: data.source, count: 0, created_at: now(), done_at: null };
     const byKey = new Map(this.db.interests.map((x) => [interestKey(x), x]));
     const ids = new Map<string, string>();
     for (const { key, added_at, ...item } of data.items) {
@@ -266,7 +299,7 @@ export class LocalStore implements Store {
         ids.set(key, found.id);
         res.updated++;
       } else {
-        const it = newInterest(item, uid(), added_at && added_at < now() ? added_at : now());
+        const it = newInterest({ ...item, import_id: batch.id }, uid(), added_at && added_at < now() ? added_at : now());
         this.db.interests.push(it);
         byKey.set(interestKey(it), it);
         ids.set(key, it.id);
@@ -283,6 +316,11 @@ export class LocalStore implements Store {
         thread_id: null, interest_id, source: data.source, created_at: at, updated_at: at, discarded_at: null, version_count: 0,
       });
       res.thoughts++;
+    }
+    if (res.added) {
+      batch.count = res.added;
+      this.db.imports.push(batch);
+      res.batch = batch.id;
     }
     this.write();
     return res;
@@ -305,7 +343,7 @@ export class LocalStore implements Store {
     this.write();
     return c;
   }
-  async updateCollection(id: string, patch: { title?: string; note?: string }) {
+  async updateCollection(id: string, patch: { title?: string; note?: string; cover_id?: string | null; decor?: Decor[] }) {
     const c = this.db.collections.find((x) => x.id === id);
     if (!c) throw new Error("That collection no longer exists.");
     Object.assign(c, patch, { updated_at: now() });
@@ -317,16 +355,30 @@ export class LocalStore implements Store {
     this.db.collectionItems = this.db.collectionItems.filter((x) => x.collection_id !== id);
     this.write();
   }
-  async addToCollection(collectionId: string, what: { interest_id?: string; thought_id?: string }) {
+  async addToCollection(collectionId: string, what: { interest_id: string }) {
     const items = this.db.collectionItems.filter((x) => x.collection_id === collectionId);
-    if (items.some((x) => (what.interest_id && x.interest_id === what.interest_id) || (what.thought_id && x.thought_id === what.thought_id))) return;
-    this.db.collectionItems.push({ id: uid(), collection_id: collectionId, interest_id: what.interest_id ?? null, thought_id: what.thought_id ?? null, added_at: now() });
+    if (items.some((x) => x.interest_id === what.interest_id)) return;
+    this.db.collectionItems.push({ id: uid(), collection_id: collectionId, interest_id: what.interest_id, thought_id: null, added_at: now() });
     const c = this.db.collections.find((x) => x.id === collectionId);
     if (c) c.updated_at = now();
     this.write();
   }
   async removeFromCollection(itemId: string) {
     this.db.collectionItems = this.db.collectionItems.filter((x) => x.id !== itemId);
+    this.write();
+  }
+  async placeItem(itemId: string, at: Placement) {
+    const x = this.db.collectionItems.find((i) => i.id === itemId);
+    if (!x) return;
+    Object.assign(x, at);
+    this.write();
+  }
+  async imports() {
+    return [...this.db.imports].sort(newestFirst);
+  }
+  async finishImport(id: string) {
+    const b = this.db.imports.find((x) => x.id === id);
+    if (b) b.done_at = now();
     this.write();
   }
 

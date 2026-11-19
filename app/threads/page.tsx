@@ -9,6 +9,7 @@ import Nav from "@/components/Nav";
 import ThoughtTabs from "@/components/ThoughtTabs";
 import { preview } from "@/components/ThoughtCard";
 import Mascot from "@/components/Mascot";
+import { rootOf } from "@/lib/threads";
 
 export default function Threads() {
   const { store } = useApp();
@@ -49,7 +50,7 @@ export default function Threads() {
         <div className="stack">
           {threads.map((th) => {
             const inside = thoughts.filter((t) => t.thread_id === th.id && t.finished);
-            const last = inside[0];
+            const root = rootOf(th, thoughts);
             return (
               <Link key={th.id} href={`/thread/?id=${th.id}`} className="card row" style={{ textDecoration: "none", alignItems: "center", gap: 14, padding: "14px 16px" }}>
                 <span className="grow stack" style={{ gap: 4, minWidth: 0 }}>
@@ -57,8 +58,8 @@ export default function Threads() {
                   <span className="small muted">
                     {inside.length} {inside.length === 1 ? "thought" : "thoughts"} · started {day(th.created_at, { weekday: false })}
                   </span>
-                  {last && <span className="serif" style={{ fontSize: 15, lineHeight: 1.3 }}>“{preview(last.body, 70)}”</span>}
-                  {last && <span className="small muted">Latest thought, {relDay(last.created_at)}</span>}
+                  {root && <span className="serif" style={{ fontSize: 15, lineHeight: 1.3 }}>Starts: “{preview(root.body, 70)}”</span>}
+                  {inside[0] && <span className="small muted">Latest thought, {relDay(inside[0].created_at)}</span>}
                 </span>
                 <span className={"tag" + (th.state === "ongoing" ? " butter" : "")}>{th.state === "ongoing" ? "Ongoing" : "Resting"}</span>
               </Link>

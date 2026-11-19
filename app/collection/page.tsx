@@ -25,7 +25,6 @@ function CollectionView() {
   }, [store, id]);
   const [mode, setMode] = useState<null | "edit" | "add" | "delete">(null);
   const [removing, setRemoving] = useState(false);
-  const [tab, setTab] = useState<"interests" | "thoughts">("interests");
   const [q, setQ] = useState("");
   const list = useRef<HTMLDivElement>(null);
 
@@ -42,8 +41,8 @@ function CollectionView() {
 
   // thoughts in this collection, plus thoughts pinned to its films, books and songs
   const itemIds = new Set(c.items.map((x) => x.interest_id).filter(Boolean));
-  const related = data.allThoughts.filter((t) => c.items.some((x) => x.thought_id === t.id) || (t.interest_id && itemIds.has(t.interest_id)));
-  const entries = c.items.filter((x) => (x.interest_id ? interests.has(x.interest_id) : x.thought_id && thoughts.has(x.thought_id)));
+  const related = data.allThoughts.filter((t) => t.interest_id && itemIds.has(t.interest_id));
+  const entries = c.items.filter((x) => x.interest_id && interests.has(x.interest_id));
   const term = normTitle(q);
 
   return (
@@ -73,12 +72,10 @@ function CollectionView() {
           </div>
         )}
         {entries.map((x) => {
-          const it = x.interest_id ? interests.get(x.interest_id)! : null;
-          const t = x.thought_id ? thoughts.get(x.thought_id)! : null;
+          const it = interests.get(x.interest_id!)!;
           return (
             <div key={x.id} className="row" style={{ gap: 8 }}>
-              {it ? (
-                <Link href={`/interest/?id=${it.id}`} className="item-row grow">
+              <Link href={`/interest/?id=${it.id}`} className="item-row grow">
                   <Poster src={it.image_url} title={it.title} kind={it.kind} className="thumb" />
                   <span className="grow">
                     <strong>{it.title}</strong>
@@ -87,23 +84,15 @@ function CollectionView() {
                     </span>
                   </span>
                 </Link>
-              ) : (
-                t && (
-                  <Link href={`/thought/?id=${t.id}`} className="card thought-card grow" style={{ gap: 4, background: "var(--blue)" }}>
-                    <span className="small"><strong>Thought</strong> · {day(t.created_at)}</span>
-                    <p>{preview(t.body, 160)}</p>
-                  </Link>
-                )
-              )}
               {removing && (
-                <button className="icon-btn" aria-label={`Take ${it?.title ?? "this thought"} out`} onClick={async () => (await store.removeFromCollection(x.id), reload())}>
+                <button className="icon-btn" aria-label={`Take ${it.title} out`} onClick={async () => (await store.removeFromCollection(x.id), reload())}>
                   <Icon name="close" size={16} />
                 </button>
               )}
             </div>
           );
         })}
-        {entries.length === 0 && <div className="empty"><h2>An empty shelf</h2><p>Add films, books, songs or thoughts that belong here.</p></div>}
+        {entries.length === 0 && <div className="empty"><h2>An empty shelf</h2><p>Add films, books, songs or links that belong here.</p></div>}
         <button className="btn block dashed" style={{ fontWeight: 500 }} onClick={() => setMode("add")}>
           <Icon name="plus" size={18} /> Add something
         </button>
@@ -124,7 +113,7 @@ function CollectionView() {
       {mode === "delete" && (
         <Dialog
           title="Delete this collection?"
-          body="Only the shelf goes. The films, books, songs and thoughts on it stay where they are."
+          body="Only the shelf goes. The films, books and songs on it stay where they are."
           face="worried"
           onClose={() => setMode(null)}
           actions={
@@ -140,14 +129,9 @@ function CollectionView() {
           <div className="scrim" onClick={() => setMode(null)} />
           <div className="dialog" role="dialog" aria-modal="true" aria-label="Add to this collection" style={{ maxHeight: "84dvh", overflowY: "auto" }}>
             <h2>Add to {c.title}</h2>
-            <div className="seg wide" role="group" aria-label="What to add">
-              <button aria-pressed={tab === "interests"} onClick={() => setTab("interests")}>From interests</button>
-              <button aria-pressed={tab === "thoughts"} onClick={() => setTab("thoughts")}>A thought</button>
-            </div>
             <input className="input" placeholder="Find" aria-label="Find" value={q} onChange={(e) => setQ(e.target.value)} />
             <div className="stack" style={{ gap: 8 }}>
-              {tab === "interests" &&
-                data.allInterests
+              {data.allInterests
                   .filter((i) => !itemIds.has(i.id) && (!term || normTitle(i.title).includes(term)))
                   .slice(0, 40)
                   .map((i) => (
@@ -160,17 +144,7 @@ function CollectionView() {
                       <Icon name="plus" size={18} />
                     </button>
                   ))}
-              {tab === "interests" && data.allInterests.length === 0 && <span className="muted">Nothing in Interests yet.</span>}
-              {tab === "thoughts" &&
-                data.allThoughts
-                  .filter((t) => t.finished && !c.items.some((x) => x.thought_id === t.id) && (!q.trim() || t.body.toLowerCase().includes(q.trim().toLowerCase())))
-                  .slice(0, 40)
-                  .map((t) => (
-                    <button key={t.id} className="card stack" style={{ gap: 4, textAlign: "left" }} onClick={async () => (await store.addToCollection(c.id, { thought_id: t.id }), reload())}>
-                      <span className="small muted">{day(t.created_at)}</span>
-                      <span className="serif" style={{ fontSize: 16, lineHeight: 1.3 }}>{preview(t.body, 100)}</span>
-                    </button>
-                  ))}
+              {data.allInterests.length === 0 && <span className="muted">Nothing in Interests yet.</span>}
             </div>
             <button className="btn ink block" onClick={() => setMode(null)}>Done</button>
           </div>

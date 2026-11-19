@@ -147,6 +147,33 @@ try {
   await page.getByRole("button", { name: /Columbus/ }).click();
   ok(await seen(page.getByRole("link", { name: /Columbus/ })), "thought shows the film it's pinned to");
 
+  console.log("Threads grow under a thought, and thoughts can be linked");
+  ok(await seen(page.getByText(/Also linked in 1 thread/)), "a linked thought says which threads show it");
+  await go("/thread/?id=sample-thread");
+  ok(await seen(page.locator(".card", { hasText: "Started here" }).getByText("Almost nothing happens in Perfect Days")), "the thread starts with its first thought");
+  ok(await seen(page.getByText("Linked from: a thought on its own")), "a linked thought sits on its own branch");
+  await shot("05a-thread");
+  await go("/thoughts/");
+  await page.getByText("Why do people perform busyness").click();
+  await page.getByRole("button", { name: "Start a thread from this" }).click();
+  await page.getByLabel("Thread name").fill("On busyness");
+  await page.getByRole("button", { name: "Start the thread" }).click();
+  await page.waitForURL(/\/thread\//);
+  ok(await seen(page.locator(".card", { hasText: "Started here" }).getByText("Why do people perform busyness")), "new thread grows from the thought");
+  await page.getByRole("button", { name: "Link a thought from elsewhere" }).click();
+  await page.getByRole("checkbox", { name: /I remember songs/ }).click();
+  await page.getByRole("button", { name: "Link 1 thought" }).click();
+  ok(await seen(page.getByText("Linked from: a thought on its own")), "linked a thought from elsewhere");
+  await go("/thoughts/");
+  await page.getByText("I remember songs by where I was standing.").click();
+  await page.getByRole("button", { name: "Link to another thread" }).click();
+  ok(await page.getByRole("checkbox", { name: /On busyness/ }).isDisabled(), "a thread it's already in can't be ticked twice");
+  await page.getByRole("checkbox", { name: /On routine and freedom/ }).click();
+  await shot("05b-link-sheet");
+  await page.getByRole("button", { name: "Link to 1 thread" }).click();
+  ok(await seen(page.getByText(/Also linked in 2 threads/)), "one thought linked into two threads");
+  ok(!(await page.getByRole("button", { name: "Add to a collection" }).count()), "thoughts no longer go into collections");
+
   console.log("Book and music search");
   await go("/interests/add/?kind=book");
   await page.getByLabel("Search by title").fill("remains of the day");
