@@ -7,9 +7,10 @@ import { leaveUndo, useData } from "@/lib/useData";
 import { day, stamp, time } from "@/lib/dates";
 import Icon from "@/components/Icon";
 import Dialog from "@/components/Dialog";
-import ThreadPicker from "@/components/ThreadPicker";
 import Poster from "@/components/Poster";
-import { CollectionPicker, InterestPicker } from "@/components/Pickers";
+import PickMany from "@/components/PickMany";
+import { InterestPicker } from "@/components/Pickers";
+import { rootOf } from "@/lib/threads";
 import { details } from "@/lib/interests";
 import { preview, topicColour } from "@/components/ThoughtCard";
 
@@ -20,21 +21,32 @@ function ThoughtView() {
   const router = useRouter();
   const id = useSearchParams().get("id") || "";
   const { data, error, reload } = useData(async () => {
-    const t = await store.thought(id);
-    const thread = t?.thread_id ? await store.thread(t.thread_id) : null;
-    const inThread = thread ? (await store.thoughts()).filter((x) => x.thread_id === thread.id).length : 0;
+    const [t, all, threads, links] = await Promise.all([store.thought(id), store.thoughts(), store.threads(), store.threadLinks()]);
+    const thread = t?.thread_id ? threads.find((x) => x.id === t.thread_id) ?? null : null;
+    const inThread = thread ? all.filter((x) => x.thread_id === thread.id && x.finished).length : 0;
+    const isRoot = !!thread && rootOf(thread, all)?.id === t?.id;
     const about = t?.interest_id ? await store.interest(t.interest_id) : null;
-    return { t, thread, inThread, about };
+    const mine = links.filter((l) => l.thought_id === id);
+    const linkedIn = mine.map((l) => threads.find((x) => x.id === l.thread_id)).filter((x): x is NonNullable<typeof x> => !!x);
+    const others = threads
+      .filter((x) => x.id !== t?.thread_id)
+      .map((x) => {
+        const root = rootOf(x, all);
+        const n = all.filter((y) => y.thread_id === x.id && y.finished).length;
+        return { id: x.id, title: x.title, sub: `${root ? `Starts: “${preview(root.body, 34)}” · ` : ""}${n} ${n === 1 ? "thought" : "thoughts"}`, done: mine.some((l) => l.thread_id === x.id) ? "Already linked here" : undefined };
+      });
+    return { t, thread, inThread, isRoot, about, linkedIn, others };
   }, [store, id]);
   const [versions, setVersions] = useState<{ id: string; body: string; created_at: string }[] | null>(null);
   const [asking, setAsking] = useState(false);
-  const [picking, setPicking] = useState(false);
-  const [pinning, setPinning] = useState<null | "interest" | "collection">(null);
+  const [sheet, setSheet] = useState<null | "link" | "start">(null);
+  const [pinning, setPinning] = useState(false);
+  const [name, setName] = useState("");
   const [saved, setSaved] = useState("");
 
   if (error) return <main className="screen no-nav"><p className="error">{error}</p></main>;
   if (!data) return <main className="screen no-nav" />;
-  const { t, thread, inThread, about } = data;
+  const { t, thread, inThread, isRoot, about, linkedIn, others } = data;
   if (!t || t.discarded_at)
     return (
       <main className="screen no-nav">
@@ -97,9 +109,9 @@ function ThoughtView() {
           ))}
         </div>
       )}
-      <section className="stack" style={{ gap: 8 }}>
-        <h2 style={{ fontSize: 15 }}>Connected to</h2>
-        {about && (
+      {about && (
+        <section className="stack" style={{ gap: 8 }}>
+          <h2 style={{ fontSize: 15 }}>About</h2>
           <div className="item-row" style={{ paddingRight: 6 }}>
             <Poster src={about.image_url} title={about.title} kind={about.kind} className="thumb" />
             <Link className="grow" href={`/interest/?id=${about.id}`} style={{ textDecoration: "none" }}>
@@ -110,35 +122,54 @@ function ThoughtView() {
               <Icon name="close" size={16} />
             </button>
           </div>
-        )}
+        </section>
+      )}
+      <section className="card thread-box" aria-label="Threads">
+        <h2 style={{ fontSize: 15 }}>Threads</h2>
         {thread ? (
-          <Link href={`/thread/?id=${thread.id}`} className="card between" style={{ textDecoration: "none" }}>
-            <strong style={{ fontWeight: 600 }}>{thread.title}</strong>
-            <span className="small muted">Thread · {inThread} {inThread === 1 ? "thought" : "thoughts"}</span>
+          <Link href={`/thread/?id=${thread.id}`} className="between" style={{ textDecoration: "none", gap: 10 }}>
+            <span className="stack" style={{ gap: 2 }}>
+              <span className="small muted">{isRoot ? "This thought starts" : "A follow-up in"}</span>
+              <strong style={{ fontWeight: 600 }}>{thread.title}</strong>
+            </span>
+            <span className="small muted" style={{ whiteSpace: "nowrap" }}>{inThread} {inThread === 1 ? "thought" : "thoughts"} ›</span>
           </Link>
         ) : (
-          !about && <span className="small muted">Not part of a thread yet.</span>
+          <span className="small muted">Follow this idea over time. Follow-ups grow under this thought.</span>
+        )}
+        <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+          {!thread && (
+            <button className="btn sm ink" onClick={() => (setName(""), setSheet("start"))}>
+              Start a thread from this
+            </button>
+          )}
+          <button className="btn sm" onClick={() => setSheet("link")}>
+            Link to another thread
+          </button>
+        </div>
+        {linkedIn.length > 0 && (
+          <span className="small muted">
+            Also linked in {linkedIn.length} {linkedIn.length === 1 ? "thread" : "threads"}:{" "}
+            {linkedIn.map((x, i) => (
+              <span key={x.id}>
+                {i > 0 && ", "}
+                <Link href={`/thread/?id=${x.id}`} style={{ color: "var(--ink)" }}>{x.title}</Link>
+              </span>
+            ))}
+          </span>
+        )}
+        {thread && !isRoot && (
+          <button className="link small" style={{ alignSelf: "flex-start", minHeight: 32 }} onClick={async () => (await store.updateThought(t.id, { thread_id: null }), reload())}>
+            Take it out of {thread.title}
+          </button>
         )}
       </section>
-      <div className="stack" style={{ gap: 10 }}>
-        {!about && (
-          <button className="btn block" onClick={() => setPinning("interest")}>
-            Pin to a film, book or song
-          </button>
-        )}
-        <button className="btn block" onClick={() => setPinning("collection")}>
-          Add to a collection
+      {saved && <span className="small muted" role="status" style={{ textAlign: "center" }}>{saved}</span>}
+      {!about && (
+        <button className="btn sm block" onClick={() => setPinning(true)}>
+          Pin to a film, book or song
         </button>
-        {saved && <span className="small muted" role="status" style={{ textAlign: "center" }}>{saved}</span>}
-        <button className="btn block" onClick={() => setPicking(true)}>
-          {thread ? "Move to another thread" : "Add to a thread"}
-        </button>
-        {thread && (
-          <button className="link" style={{ fontWeight: 500 }} onClick={async () => (await store.updateThought(t.id, { thread_id: null }), reload())}>
-            Take it out of this thread
-          </button>
-        )}
-      </div>
+      )}
       {asking && (
         <Dialog
           title="Move this thought to Discarded?"
@@ -157,36 +188,54 @@ function ThoughtView() {
           }
         />
       )}
-      {pinning === "interest" && (
+      {pinning && (
         <InterestPicker
           store={store}
-          onClose={() => setPinning(null)}
+          onClose={() => setPinning(false)}
           onPick={async (iid) => {
             await store.updateThought(t.id, { interest_id: iid });
-            setPinning(null);
+            setPinning(false);
             reload();
           }}
         />
       )}
-      {pinning === "collection" && (
-        <CollectionPicker
-          store={store}
-          onClose={() => setPinning(null)}
-          onPick={async (cid) => {
-            await store.addToCollection(cid, { thought_id: t.id });
-            const c = await store.collection(cid);
-            setPinning(null);
-            setSaved(`Added to ${c?.title ?? "the collection"}.`);
-          }}
-        />
+      {sheet === "start" && (
+        <Dialog
+          title="Start a thread from this"
+          body="Name the idea. This thought sits at the top, and follow-ups grow under it."
+          onClose={() => setSheet(null)}
+          actions={
+            <>
+              <button
+                className="btn ink block"
+                disabled={!name.trim()}
+                onClick={async () => {
+                  const th = await store.startThread(t.id, name.trim().slice(0, 200));
+                  router.push(`/thread/?id=${th.id}`);
+                }}
+              >
+                Start the thread
+              </button>
+              <button className="link" style={{ fontWeight: 500 }} onClick={() => setSheet(null)}>Cancel</button>
+            </>
+          }
+        >
+          <input className="input" autoFocus aria-label="Thread name" placeholder="For example, On routine and freedom" value={name} onChange={(e) => setName(e.target.value)} />
+        </Dialog>
       )}
-      {picking && (
-        <ThreadPicker
-          store={store}
-          onClose={() => setPicking(false)}
-          onPick={async (tid) => {
-            await store.updateThought(t.id, { thread_id: tid });
-            setPicking(false);
+      {sheet === "link" && (
+        <PickMany
+          title="Link to a thread"
+          intro="It shows in that thread as a link, on its own little branch. Nothing is copied, and the thought stays where it is. Tick one or more."
+          items={others}
+          find="Find a thread"
+          empty="No other threads yet. Start one from any thought."
+          confirm={(n) => `Link to ${n} ${n === 1 ? "thread" : "threads"}`}
+          onClose={() => setSheet(null)}
+          onDone={async (ids) => {
+            await store.linkToThreads(t.id, ids);
+            setSheet(null);
+            setSaved(`Linked to ${ids.length} ${ids.length === 1 ? "thread" : "threads"}.`);
             reload();
           }}
         />

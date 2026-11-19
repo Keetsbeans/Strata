@@ -22,7 +22,7 @@ export default function Dialog({ title, body, children, actions, face = "asking"
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
-    ref.current?.querySelector<HTMLElement>("button, a")?.focus();
+    ref.current?.querySelector<HTMLElement>("input, button, a")?.focus();
     const key = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", key);
     return () => {

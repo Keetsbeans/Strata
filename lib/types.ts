@@ -34,7 +34,14 @@ export type Thread = {
   discarded_at: string | null;
   /** thoughts that were let go when the thread was deleted with "keep the thoughts", so a restore can tie them back */
   released_ids: string[];
+  /** the thought the thread grew from; older threads have none and use their earliest thought */
+  root_id?: string | null;
+  /** an optional line about what the thread follows */
+  note?: string;
 };
+
+/** a thought shown inside another thought's thread, without being copied or moved */
+export type ThreadLink = { id: string; thread_id: string; thought_id: string; added_at: string };
 
 export const DISCARD_DAYS = 30;
 
@@ -73,12 +80,42 @@ export type Interest = {
   done_at: string | null;
   /** "Keep waiting" in Inbox pushes the next nudge back */
   nudged_at: string | null;
+  /** the import it came in with, if any */
+  import_id?: string | null;
 };
 
-export type Collection = { id: string; title: string; note: string; created_at: string; updated_at: string };
+/** one Letterboxd or Goodreads import, shown as a single line in Inbox until sorted */
+export type ImportBatch = { id: string; source: string; count: number; created_at: string; done_at: string | null };
 
-/** one thing on a collection's shelf: an interest or a thought */
-export type CollectionItem = { id: string; collection_id: string; interest_id: string | null; thought_id: string | null; added_at: string };
+/** a sticker or a short label placed on a collection's board */
+export type Decor = { id: string; kind: "sticker" | "label"; name: string; x: number; y: number; r: number };
+
+export type Collection = {
+  id: string;
+  title: string;
+  note: string;
+  created_at: string;
+  updated_at: string;
+  /** the saved thing whose picture is the cover; otherwise a collage of the first few */
+  cover_id?: string | null;
+  /** stickers and labels on the board */
+  decor?: Decor[];
+};
+
+/** one saved thing in a collection, and where it sits on the board (empty until placed) */
+export type CollectionItem = {
+  id: string;
+  collection_id: string;
+  interest_id: string | null;
+  /** older collections could hold thoughts; these are taken out on load */
+  thought_id: string | null;
+  added_at: string;
+  x?: number | null;
+  y?: number | null;
+  r?: number | null;
+  z?: number | null;
+};
+export type Placement = { x: number; y: number; r: number; z: number };
 
 export type SavedLink = { id: string; url: string; title: string; note: string; created_at: string };
 

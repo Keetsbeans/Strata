@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Collection, CollectionItem, Interest, SavedLink, Thought, ThoughtVersion, Thread } from "@/lib/types";
+import type { Collection, CollectionItem, Decor, ImportBatch, Interest, Placement, SavedLink, Thought, ThoughtVersion, Thread, ThreadLink } from "@/lib/types";
 import type { ImportResult, InterestPatch, NewInterest, NewThought, ShelfImport, Store, ThoughtPatch } from "./types";
 import { interestKey } from "@/lib/catalog/match";
 
@@ -52,8 +52,27 @@ export class CloudStore implements Store {
   async addThread(title: string) {
     return this.ok<Thread>(this.sb.from("threads").insert({ title }).select().single());
   }
-  async updateThread(id: string, patch: { title?: string; state?: Thread["state"] }) {
+  async updateThread(id: string, patch: { title?: string; state?: Thread["state"]; note?: string }) {
     return this.ok<Thread>(this.sb.from("threads").update(patch).eq("id", id).select().single());
+  }
+  async startThread(thoughtId: string, title: string, note = "") {
+    const t = await this.ok<Thread>(this.sb.from("threads").insert({ title, note, root_id: thoughtId }).select().single());
+    await this.ok(this.sb.from("thoughts").update({ thread_id: t.id }).eq("id", thoughtId));
+    return t;
+  }
+  async threadLinks() {
+    return this.ok<ThreadLink[]>(this.sb.from("thread_links").select("*, threads!inner(discarded_at)").is("threads.discarded_at", null).then((r) => ({
+      ...r,
+      data: (r.data ?? []).map(({ threads: _t, ...x }: ThreadLink & { threads?: unknown }) => x),
+    })));
+  }
+  async linkToThreads(thoughtId: string, threadIds: string[]) {
+    if (!threadIds.length) return;
+    const { error } = await this.sb.from("thread_links").upsert(threadIds.map((thread_id) => ({ thread_id, thought_id: thoughtId })), { onConflict: "thread_id,thought_id", ignoreDuplicates: true });
+    if (error) throw new Error(error.message);
+  }
+  async unlink(linkId: string) {
+    await this.ok(this.sb.from("thread_links").delete().eq("id", linkId));
   }
   async discardThread(id: string, keepThoughts: boolean) {
     await this.ok(this.sb.rpc("discard_thread", { thread: id, keep_thoughts: keepThoughts }));
@@ -85,7 +104,7 @@ export class CloudStore implements Store {
     return this.ok<Thought[]>(query.order("created_at", { ascending: false }).limit(100));
   }
   async exportAll() {
-    const [thoughts, threads, versions, interests, collections, collectionItems, links] = await Promise.all([
+    const [thoughts, threads, versions, interests, collections, collectionItems, links, threadLinks, imports] = await Promise.all([
       this.ok<Thought[]>(this.sb.from("thoughts").select("*")),
       this.ok<Thread[]>(this.sb.from("threads").select("*")),
       this.ok<ThoughtVersion[]>(this.sb.from("thought_versions").select("*")),
@@ -93,8 +112,10 @@ export class CloudStore implements Store {
       this.ok<Collection[]>(this.sb.from("collections").select("*")),
       this.ok<CollectionItem[]>(this.sb.from("collection_items").select("*")),
       this.ok<SavedLink[]>(this.sb.from("saved_links").select("*")),
+      this.ok<ThreadLink[]>(this.sb.from("thread_links").select("*")),
+      this.ok<ImportBatch[]>(this.sb.from("imports").select("*")),
     ]);
-    return { exported_at: new Date().toISOString(), thoughts, threads, versions, interests, collections, collectionItems, links };
+    return { exported_at: new Date().toISOString(), thoughts, threads, versions, interests, collections, collectionItems, links, threadLinks, imports };
   }
 
   // ---------- interests ----------
@@ -115,6 +136,7 @@ export class CloudStore implements Store {
   }
   async importShelf(data: ShelfImport): Promise<ImportResult> {
     const res: ImportResult = { added: 0, updated: 0, thoughts: 0 };
+    const batch = await this.ok<ImportBatch>(this.sb.from("imports").insert({ source: data.source, count: 0 }).select().single());
     const existing = await this.interests();
     const byKey = new Map(existing.map((x) => [interestKey(x), x]));
     const ids = new Map<string, string>();
@@ -130,7 +152,7 @@ export class CloudStore implements Store {
         if (Object.keys(patch).length) await this.updateInterest(found.id, patch);
         res.updated++;
       } else {
-        fresh.push({ ...item, created_at: added_at });
+        fresh.push({ ...item, created_at: added_at, import_id: batch.id });
         freshKeys.push(key);
       }
     }
@@ -152,6 +174,10 @@ export class CloudStore implements Store {
       await this.ok(this.sb.from("thoughts").insert(reviews.slice(i, i + 200)));
     }
     res.thoughts = reviews.length;
+    if (res.added) {
+      await this.ok(this.sb.from("imports").update({ count: res.added }).eq("id", batch.id));
+      res.batch = batch.id;
+    } else await this.ok(this.sb.from("imports").delete().eq("id", batch.id));
     return res;
   }
 
@@ -161,30 +187,39 @@ export class CloudStore implements Store {
       this.ok<Collection[]>(this.sb.from("collections").select("*").order("updated_at", { ascending: false })),
       this.ok<CollectionItem[]>(this.sb.from("collection_items").select("*").order("added_at", { ascending: true })),
     ]);
-    return cols.map((c) => ({ ...c, items: items.filter((x) => x.collection_id === c.id) }));
+    return cols.map((c) => ({ ...c, items: items.filter((x) => x.collection_id === c.id && x.interest_id) }));
   }
   async collection(id: string) {
     const [c, items] = await Promise.all([
       this.ok<Collection | null>(this.sb.from("collections").select("*").eq("id", id).maybeSingle()),
       this.ok<CollectionItem[]>(this.sb.from("collection_items").select("*").eq("collection_id", id).order("added_at", { ascending: true })),
     ]);
-    return c ? { ...c, items } : null;
+    return c ? { ...c, items: items.filter((x) => x.interest_id) } : null;
   }
   async addCollection(title: string, note = "") {
     return this.ok<Collection>(this.sb.from("collections").insert({ title, note }).select().single());
   }
-  async updateCollection(id: string, patch: { title?: string; note?: string }) {
+  async updateCollection(id: string, patch: { title?: string; note?: string; cover_id?: string | null; decor?: Decor[] }) {
     return this.ok<Collection>(this.sb.from("collections").update(patch).eq("id", id).select().single());
   }
   async deleteCollection(id: string) {
     await this.ok(this.sb.from("collections").delete().eq("id", id));
   }
-  async addToCollection(collectionId: string, what: { interest_id?: string; thought_id?: string }) {
-    const { error } = await this.sb.from("collection_items").insert({ collection_id: collectionId, interest_id: what.interest_id ?? null, thought_id: what.thought_id ?? null });
+  async addToCollection(collectionId: string, what: { interest_id: string }) {
+    const { error } = await this.sb.from("collection_items").insert({ collection_id: collectionId, interest_id: what.interest_id });
     if (error && error.code !== "23505") throw new Error(error.message); // 23505: it is already there
   }
   async removeFromCollection(itemId: string) {
     await this.ok(this.sb.from("collection_items").delete().eq("id", itemId));
+  }
+  async placeItem(itemId: string, at: Placement) {
+    await this.ok(this.sb.from("collection_items").update(at).eq("id", itemId));
+  }
+  async imports() {
+    return this.ok<ImportBatch[]>(this.sb.from("imports").select("*").order("created_at", { ascending: false }));
+  }
+  async finishImport(id: string) {
+    await this.ok(this.sb.from("imports").update({ done_at: new Date().toISOString() }).eq("id", id));
   }
 
   // ---------- links to sort ----------

@@ -454,3 +454,16 @@ button.tag { min-height: 44px; padding: 0 14px; }
 button.mood { min-height: 44px; padding: 0 12px; font-size: 12px; }
 .month-link { min-height: 44px; }
 .search-box input, input[type="url"] { min-height: 44px; align-self: stretch; }
+
+/* tick one or more */
+.choice.box .dot { border-radius: 6px; }
+.choice.box[aria-checked="true"] { background: var(--lilac); }
+.choice.box[aria-checked="true"] .dot { background: var(--ink); color: var(--card); }
+.choice.box[aria-checked="true"] .dot::after { display: none; }
+.choice.box:disabled { opacity: 0.55; }
+
+/* threads */
+.tl-dot.root { width: 14px; height: 14px; margin-left: -1px; background: var(--lilac); }
+.tl-branch { border-style: dashed; background: transparent; }
+.tl-label { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+.thread-box { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 16px; }

@@ -1,4 +1,4 @@
-import type { Collection, CollectionItem, Interest, InterestKind, Thought, ThoughtKind, ThoughtVersion, Thread, ThreadState, SavedLink } from "@/lib/types";
+import type { Collection, CollectionItem, Decor, ImportBatch, Interest, InterestKind, Placement, Thought, ThoughtKind, ThoughtVersion, Thread, ThreadLink, ThreadState, SavedLink } from "@/lib/types";
 
 export type NewThought = { body: string; kind: ThoughtKind; finished: boolean; topics?: string[]; thread_id?: string | null; interest_id?: string | null };
 export type ThoughtPatch = Partial<Pick<Thought, "body" | "topics" | "finished" | "thread_id" | "kind" | "kept" | "interest_id">>;
@@ -12,7 +12,7 @@ export type ShelfImport = {
   items: (NewInterest & { key: string; added_at?: string })[];
   reviews: { key: string; body: string; written_at: string }[];
 };
-export type ImportResult = { added: number; updated: number; thoughts: number };
+export type ImportResult = { added: number; updated: number; thoughts: number; batch?: string };
 
 /** Everything the screens need. Two versions exist: one in this browser only (try-out mode) and one on Supabase. */
 export interface Store {
@@ -29,7 +29,13 @@ export interface Store {
   threads(): Promise<Thread[]>; // not discarded
   thread(id: string): Promise<Thread | null>;
   addThread(title: string): Promise<Thread>;
-  updateThread(id: string, patch: { title?: string; state?: ThreadState }): Promise<Thread>;
+  updateThread(id: string, patch: { title?: string; state?: ThreadState; note?: string }): Promise<Thread>;
+  /** a new thread that grows from this thought */
+  startThread(thoughtId: string, title: string, note?: string): Promise<Thread>;
+  /** thoughts shown in other thoughts' threads */
+  threadLinks(): Promise<ThreadLink[]>;
+  linkToThreads(thoughtId: string, threadIds: string[]): Promise<void>;
+  unlink(linkId: string): Promise<void>;
   /** keepThoughts: the thoughts leave the thread and stay in the list. Otherwise they go to Discarded with it. */
   discardThread(id: string, keepThoughts: boolean): Promise<void>;
   restoreThreads(ids: string[]): Promise<void>;
@@ -52,9 +58,13 @@ export interface Store {
   collections(): Promise<(Collection & { items: CollectionItem[] })[]>;
   collection(id: string): Promise<(Collection & { items: CollectionItem[] }) | null>;
   addCollection(title: string, note?: string): Promise<Collection>;
-  updateCollection(id: string, patch: { title?: string; note?: string }): Promise<Collection>;
+  updateCollection(id: string, patch: { title?: string; note?: string; cover_id?: string | null; decor?: Decor[] }): Promise<Collection>;
+  /** where a thing sits on the board */
+  placeItem(itemId: string, at: Placement): Promise<void>;
+  imports(): Promise<ImportBatch[]>; // newest first
+  finishImport(id: string): Promise<void>;
   deleteCollection(id: string): Promise<void>;
-  addToCollection(collectionId: string, what: { interest_id?: string; thought_id?: string }): Promise<void>;
+  addToCollection(collectionId: string, what: { interest_id: string }): Promise<void>;
   removeFromCollection(itemId: string): Promise<void>;
 
   // Inbox: links saved to sort later
