@@ -262,6 +262,39 @@ try {
   await go("/thoughts/");
   ok(await seen(page.getByText("The last scene keeps playing in my head.")), "thought stayed after its film was removed");
 
+  console.log("Opening screens, calendar, unfinished stack");
+  await page.evaluate(() => (localStorage.removeItem("strata:onboarded"), localStorage.removeItem("strata:mode")));
+  await go("/welcome/");
+  ok(await seen(page.getByText("Your head is full of things worth keeping.")), "first opening screen shows for someone new");
+  await shot("20-onboarding-1");
+  await page.getByRole("button", { name: "Next" }).click();
+  ok(await seen(page.getByText("Catch them as they come.")), "second opening screen");
+  await page.getByRole("button", { name: "Next" }).click();
+  ok(await seen(page.getByText("Yours, and only yours.")), "third opening screen with the privacy note");
+  await shot("21-onboarding-3");
+  await page.getByRole("button", { name: "Start your line" }).click();
+  await go("/welcome/");
+  ok(!(await page.getByText("Your head is full of things worth keeping.").isVisible()), "opening screens only show once");
+  await page.evaluate(() => localStorage.setItem("strata:mode", "local"));
+
+  await go("/");
+  await page.getByRole("link", { name: /20\d\d/ }).first().click();
+  await page.waitForURL(/\/calendar\//);
+  ok(await seen(page.locator(".cal-day.today")), "calendar opens from the month on Home");
+  ok((await page.locator(".cal-day .cal-dot").count()) > 0, "calendar marks days with thoughts");
+  await shot("22-calendar");
+  await page.getByRole("button", { name: "Previous month" }).click();
+  ok(await seen(page.locator(".cal-day")), "calendar moves between months");
+
+  await go("/");
+  await page.locator('a[href*="/stack/"]').first().click();
+  await page.waitForURL(/\/stack\//);
+  ok(await seen(page.getByText("The train window is the only screen")), "Unfinished opens as a card stack");
+  await shot("23-stack");
+  await page.getByRole("link", { name: "Keep writing" }).click();
+  await page.waitForURL(/\/write\//);
+  ok(true, "Keep writing opens the thought to finish it");
+
   ok(errors.length === 0, "no page errors" + (errors.length ? ": " + errors.join(" | ") : ""));
   console.log("\nAll stage 2 checks passed.");
 } catch (e) {

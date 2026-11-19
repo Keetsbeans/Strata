@@ -80,9 +80,9 @@ export default function Home() {
           )}
         </h1>
         <div className="between" style={{ marginBottom: 10 }}>
-          <span style={{ fontWeight: 600 }}>
+          <Link href="/calendar/" className="month-link">
             {MONTHS_LONG[now.getMonth()]} {now.getFullYear()}
-          </span>
+          </Link>
           <span className="small" style={{ color: "var(--on-dark)" }}>
             Today, {day(now)} · {todayCount} {todayCount === 1 ? "thought" : "thoughts"} so far
           </span>
@@ -148,7 +148,7 @@ export default function Home() {
           {first && <span className="small muted">These fill up as you go. Nothing needs sorting today.</span>}
           <div className="folders">
             <Folder href="/review/" label="To flip through" count={unsorted.length} icon="flip" colour="var(--butter)" sheet="var(--blue)" />
-            <Folder href="/thoughts/?filter=unfinished" label="Unfinished" count={drafts.length} icon="unfinished" colour="var(--blue)" sheet="var(--lilac)" />
+            <Folder href="/stack/" label="Unfinished" count={drafts.length} icon="unfinished" colour="var(--blue)" sheet="var(--lilac)" />
             <Folder href="/interests/" label="Interests" count={interests.length} icon="interests" colour="var(--lilac)" sheet="var(--butter)" />
             <Folder href="/collections/" label="Collections" count={collections.length} icon="collections" colour="var(--ink)" sheet="var(--butter)" dark />
             <Folder href="/threads/" label="Threads" count={threads.length} icon="threads" colour="var(--card)" sheet="var(--lilac)" />
