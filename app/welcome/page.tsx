@@ -6,6 +6,7 @@ import { useStartTryOut } from "../providers";
 import { useEffect, useState } from "react";
 import Onboarding from "@/components/Onboarding";
 import { introSeen, markIntro } from "@/lib/intro";
+import { setGuest } from "@/lib/guest";
 
 
 export default function Welcome() {
@@ -18,8 +19,10 @@ export default function Welcome() {
     return (
       <Onboarding
         onDone={() => {
+          // straight to Home to try writing; the first save offers an account
           markIntro(true);
-          setIntro(false);
+          setGuest(true);
+          tryOut();
         }}
       />
     );

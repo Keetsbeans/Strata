@@ -8,10 +8,13 @@ type Props = {
   className?: string;
   /** gentle idle movement: breathing, blinking, and waving when the arm is up. Off for people who ask for less motion. */
   move?: boolean;
+  /** 0 = layers neatly stacked, 1 = knocked askew. Changes glide. */
+  loose?: number;
 };
 
 /** The little stack of three layers. Keep it small. */
-export default function Mascot({ size = 72, eyes = "dot", mouth = "smile", arms = "down", tilt = 0, line = "#151515", className, move = true }: Props) {
+export default function Mascot({ size = 72, eyes = "dot", mouth = "smile", arms = "down", tilt = 0, line = "#151515", className, move = true, loose = 0 }: Props) {
+  const L = (dx: number, dy: number, r: number) => ({ transform: `translate(${dx * loose}px, ${dy * loose}px) rotate(${r * loose}deg)` });
   const [armL, armR] = {
     down: ["M25 62q-9 3-9 13", "M95 62q9 3 9 13"],
     up: ["M25 60q-11-4-12-17", "M95 60q11-4 12-17"],
@@ -57,16 +60,17 @@ export default function Mascot({ size = 72, eyes = "dot", mouth = "smile", arms 
     <svg aria-hidden="true" className={cls} width={size} height={size} viewBox="0 0 120 120" fill="none" stroke={line} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M46 96v11h-7M74 96v11h7" />
       <g className="m-all">
-      <g>
+      <g className="m-layer m-l1" style={L(-7, 2, -5)}>
         <rect x="20" y="72" width="80" height="24" rx="10" fill="#DCE4F2" />
         <path d="M32 85h7M45 85h3M78 82h8" stroke="currentColor" strokeWidth="2" />
       </g>
-      <g>
+      <g className="m-layer m-l2" style={L(8, -2, 7)}>
         <path className="m-arm-l" d={armL} />
         <path className="m-arm-r" d={armR} />
         <rect x="25" y="50" width="70" height="24" rx="10" fill="#E6DB86" />
         <path d="M36 60h4M72 64h9M86 64h2" stroke="currentColor" strokeWidth="2" />
       </g>
+      <g className="m-layer m-l3" style={L(-6, -4, -9)}>
       <g className="m-head">
       <g transform={`rotate(${tilt} 60 37)`}>
         <path d="M60 22q-2-7 4-9" />
@@ -75,6 +79,7 @@ export default function Mascot({ size = 72, eyes = "dot", mouth = "smile", arms 
           <g className="m-eyes">{eye}</g>
           {mo}
         </g>
+      </g>
       </g>
       </g>
       </g>
