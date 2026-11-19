@@ -173,11 +173,11 @@ export class LocalStore implements Store {
     const live = new Set(this.db.threads.filter((t) => !t.discarded_at).map((t) => t.id));
     return this.db.threadLinks.filter((x) => live.has(x.thread_id));
   }
-  async linkToThreads(thoughtId: string, threadIds: string[]) {
+  async linkToThreads(thoughtId: string, threadIds: string[], under: string | null = null) {
     for (const thread_id of threadIds) {
       if (this.db.threadLinks.some((x) => x.thread_id === thread_id && x.thought_id === thoughtId)) continue;
       if (this.db.thoughts.some((x) => x.id === thoughtId && x.thread_id === thread_id)) continue;
-      this.db.threadLinks.push({ id: uid(), thread_id, thought_id: thoughtId, added_at: now() });
+      this.db.threadLinks.push({ id: uid(), thread_id, thought_id: thoughtId, added_at: now(), under_id: under });
     }
     this.write();
   }
@@ -185,7 +185,7 @@ export class LocalStore implements Store {
     this.db.threadLinks = this.db.threadLinks.filter((x) => x.id !== linkId);
     this.write();
   }
-  async updateThread(id: string, patch: { title?: string; state?: Thread["state"]; note?: string }) {
+  async updateThread(id: string, patch: { title?: string; state?: Thread["state"]; note?: string; labels?: string[] }) {
     const t = this.db.threads.find((x) => x.id === id);
     if (!t) throw new Error("That thread no longer exists.");
     Object.assign(t, patch);

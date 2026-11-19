@@ -61,7 +61,7 @@ function Splash({ onDone }: { onDone: () => void }) {
   return (
     <main className="splash" onClick={onDone} aria-label="Strata is opening. Tap to skip.">
       <div className="splash-mascot">
-        <Mascot size={150} className="assemble" eyes={hi ? "happy" : "dot"} mouth={hi ? "grin" : "flat"} arms={hi ? "wave" : "down"} line="#FBFAF7" />
+        <Mascot size={150} tap={false} className="assemble" eyes={hi ? "happy" : "dot"} mouth={hi ? "grin" : "flat"} arms={hi ? "wave" : "down"} line="#FBFAF7" />
         {hi && <span className="splash-hi">hi!</span>}
       </div>
       <span className="splash-name">Strata</span>
@@ -346,11 +346,11 @@ function Screens({ onDone }: { onDone: () => void }) {
         <span className="onb-mascot" ref={mascot}>
           {step === 2 ? (
             <button type="button" className="onb-poke" onClick={poke} aria-label="Give the mascot a poke">
-              <Mascot size={92} {...face} loose={0} className={popping ? "pop" : undefined} line="#151515" />
+              <Mascot size={92} tap={false} {...face} loose={0} className={popping ? "pop" : undefined} line="#151515" />
               {!tapped && <span className="onb-psst">tap me</span>}
             </button>
           ) : (
-            <Mascot size={MASCOT} {...face} loose={loose} tilt={step === 0 ? -8 : 0} line="#FBFAF7" />
+            <Mascot size={MASCOT} tap={false} {...face} loose={loose} tilt={step === 0 ? -8 : 0} line="#FBFAF7" />
           )}
         </span>
       </div>

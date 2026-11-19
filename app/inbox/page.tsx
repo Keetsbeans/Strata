@@ -13,6 +13,7 @@ import Nav from "@/components/Nav";
 import Mascot from "@/components/Mascot";
 import Poster from "@/components/Poster";
 import Icon from "@/components/Icon";
+import SlideSeg from "@/components/SlideSeg";
 import { preview } from "@/components/ThoughtCard";
 
 const DAY = 86400000;
@@ -88,7 +89,7 @@ function Inbox() {
     <>
       <main className="screen">
         <header className="between">
-          <h1 className="h-big">Inbox</h1>
+          <h1 className="h-page">Inbox</h1>
           {(backCount > 0 || sortCount > 0) && (
             <span className="tag butter">
               {backCount} new · {sortCount} to sort
@@ -108,14 +109,14 @@ function Inbox() {
           </>
         ) : (
           <>
-            <div className="seg wide" role="group" aria-label="Inbox sections">
+            <SlideSeg wide label="Inbox sections" dep={shown}>
               <button aria-pressed={shown === "back"} onClick={() => setTab("back")}>
                 Coming back<span className="count">{backCount}</span>
               </button>
               <button aria-pressed={shown === "sort"} onClick={() => setTab("sort")}>
                 To sort<span className="count">{sortCount}</span>
               </button>
-            </div>
+            </SlideSeg>
 
             {shown === "back" && (
               <section className="stack" style={{ gap: 12 }}>

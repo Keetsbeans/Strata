@@ -9,6 +9,7 @@ import { getMoods } from "@/lib/moods";
 import { normTitle } from "@/lib/catalog/match";
 import { usePictureFill } from "@/lib/catalog/pictures";
 import Icon from "@/components/Icon";
+import SlideSeg from "@/components/SlideSeg";
 import Poster from "@/components/Poster";
 import Dialog from "@/components/Dialog";
 import Nav from "@/components/Nav";
@@ -98,10 +99,10 @@ function CollectionView() {
           </div>
         </div>
         {things.length > 0 && (
-          <div className="seg wide" role="group" aria-label="How to show it">
+          <SlideSeg wide label="How to show it" dep={view}>
             <button aria-pressed={view === "tiles"} onClick={() => pickView("tiles")}>Tiles</button>
             <button aria-pressed={view === "board"} onClick={() => pickView("board")}>Board</button>
-          </div>
+          </SlideSeg>
         )}
         {view === "board" && things.length > 0 && (
           <>
@@ -188,10 +189,10 @@ function CollectionView() {
         <>
           <div className="scrim" onClick={() => setDrawer(null)} />
           <div className="dialog" role="dialog" aria-modal="true" aria-label="Stickers and labels">
-            <div className="seg wide" role="group" aria-label="Stickers or labels">
+            <SlideSeg wide label="Stickers or labels" dep={drawer}>
               <button aria-pressed={drawer === "stickers"} onClick={() => setDrawer("stickers")}>Stickers</button>
               <button aria-pressed={drawer === "labels"} onClick={() => setDrawer("labels")}>Labels</button>
-            </div>
+            </SlideSeg>
             {drawer === "stickers" ? (
               <>
                 <div className="sticker-grid">

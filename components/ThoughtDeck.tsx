@@ -36,6 +36,19 @@ export default function ThoughtDeck({
   const [done, setDone] = useState<string[]>([]);
   const [topics, setTopics] = useState<string[]>([]);
   const [lean, setLean] = useState(0);
+  // the first time someone flips through, show what each direction does
+  const [guide, setGuide] = useState(false);
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("strata:swipe-guide")) setGuide(true);
+    } catch {}
+  }, []);
+  const doneGuide = () => {
+    setGuide(false);
+    try {
+      localStorage.setItem("strata:swipe-guide", "1");
+    } catch {}
+  };
   const left = pile.filter((x) => !done.includes(x.id));
   const t = left[0];
   const next = left[1];
@@ -70,6 +83,23 @@ export default function ThoughtDeck({
   const th = threadName(t);
   return (
     <div className="stack" style={{ gap: 14 }}>
+      {guide && (
+        <div className="guide-layer" role="dialog" aria-modal="true" aria-label="How flipping works" onClick={doneGuide}>
+          <div className="guide-box" onClick={(e) => e.stopPropagation()}>
+            <strong className="guide-title">Flip through your thoughts</strong>
+            <span className="small muted" style={{ textAlign: "center" }}>Push each card one of three ways.</span>
+            <div className="guide-stage">
+              <span className="sg sg-up"><Icon name="swipe-up" size={18} /><b>Not sure</b><small>Leave it unsorted for later</small></span>
+              <span className="sg sg-left"><Icon name="swipe-left" size={18} /><b>Discard</b><small>Waits 30 days, then goes</small></span>
+              <span className="sg sg-right"><Icon name="swipe-right" size={18} /><b>Keep</b><small>Stays in your thoughts</small></span>
+              <span className="guide-card" aria-hidden="true">
+                <i /><i /><i />
+              </span>
+            </div>
+            <button className="btn sm ink" style={{ minWidth: 140 }} onClick={doneGuide} autoFocus>Got it</button>
+          </div>
+        </div>
+      )}
       <div className="deck">
         {next && (
           <div className="card deck-back" aria-hidden="true">
@@ -96,12 +126,13 @@ export default function ThoughtDeck({
         </SwipeCard>
       </div>
       <p className="small muted swipe-help">
-        {pile.length - left.length + 1} of {pile.length} · right to keep, left to discard, up if you&apos;re not sure
+        {pile.length - left.length + 1} of {pile.length} ·{" "}
+        <button className="link small" onClick={() => setGuide(true)}>How does this work?</button>
       </p>
       <div className="review-actions">
-        <button className="btn sm" onClick={discard}>Discard</button>
-        <button className="btn sm" onClick={later} aria-label="Not sure, leave it unsorted">Not sure</button>
-        <button className="btn sm ink" onClick={keep}>Keep</button>
+        <button className="btn sm act no" onClick={discard}><Icon name="swipe-left" size={17} />Discard</button>
+        <button className="btn sm act maybe" onClick={later} aria-label="Not sure, leave it unsorted"><Icon name="swipe-up" size={17} />Not sure</button>
+        <button className="btn sm act yes" onClick={keep}><Icon name="swipe-right" size={17} />Keep</button>
       </div>
     </div>
   );

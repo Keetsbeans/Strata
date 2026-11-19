@@ -52,7 +52,7 @@ export class CloudStore implements Store {
   async addThread(title: string) {
     return this.ok<Thread>(this.sb.from("threads").insert({ title }).select().single());
   }
-  async updateThread(id: string, patch: { title?: string; state?: Thread["state"]; note?: string }) {
+  async updateThread(id: string, patch: { title?: string; state?: Thread["state"]; note?: string; labels?: string[] }) {
     return this.ok<Thread>(this.sb.from("threads").update(patch).eq("id", id).select().single());
   }
   async startThread(thoughtId: string, title: string, note = "") {
@@ -66,9 +66,9 @@ export class CloudStore implements Store {
       data: (r.data ?? []).map(({ threads: _t, ...x }: ThreadLink & { threads?: unknown }) => x),
     })));
   }
-  async linkToThreads(thoughtId: string, threadIds: string[]) {
+  async linkToThreads(thoughtId: string, threadIds: string[], under: string | null = null) {
     if (!threadIds.length) return;
-    const { error } = await this.sb.from("thread_links").upsert(threadIds.map((thread_id) => ({ thread_id, thought_id: thoughtId })), { onConflict: "thread_id,thought_id", ignoreDuplicates: true });
+    const { error } = await this.sb.from("thread_links").upsert(threadIds.map((thread_id) => ({ thread_id, thought_id: thoughtId, under_id: under })), { onConflict: "thread_id,thought_id", ignoreDuplicates: true });
     if (error) throw new Error(error.message);
   }
   async unlink(linkId: string) {

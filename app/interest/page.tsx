@@ -16,6 +16,7 @@ import LabelPicker from "@/components/LabelPicker";
 import { usePictureFill } from "@/lib/catalog/pictures";
 import { firstUrl, hostOf } from "@/lib/catalog/links";
 import Icon from "@/components/Icon";
+import SlideSeg from "@/components/SlideSeg";
 import Poster, { Dots } from "@/components/Poster";
 import Dialog from "@/components/Dialog";
 import { CollectionPicker, ThoughtPicker } from "@/components/Pickers";
@@ -78,10 +79,10 @@ function ItemView() {
         <button className="icon-btn round" aria-label="Back" onClick={() => router.back()}>
           <Icon name="back" />
         </button>
-        <div className="seg" role="group" aria-label="Status">
+        <SlideSeg label="Status" dep={it.status}>
           <button aria-pressed={it.status === "want"} onClick={() => status("want")}>{L.want}</button>
           <button aria-pressed={it.status === "done"} onClick={() => status("done")}>{L.done}</button>
-        </div>
+        </SlideSeg>
         <button
           className="icon-btn round"
           aria-label={it.favourite ? "Remove from favourites" : "Add to favourites"}

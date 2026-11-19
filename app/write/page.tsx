@@ -148,7 +148,15 @@ function Write() {
         </button>
       )}
 
-      {kind === "card" ? (
+      {kind === "card" && !showTimer && !timer.started ? (
+        <button className="timer-offer" onClick={() => setShowTimer(true)}>
+          <span className="timer-offer-ic"><Icon name="clock" size={18} /></span>
+          <span className="stack grow" style={{ gap: 1, textAlign: "left" }}>
+            <strong>Set a timer</strong>
+            <span className="small muted">Getting distracted? Give yourself a few minutes to finish this thought.</span>
+          </span>
+        </button>
+      ) : kind === "card" ? (
         <section className="card timer-card">
           <div className="row" style={{ gap: 16 }}>
             <Dial left={timer.left} total={timer.minutes * 60000} size={104} />
@@ -164,6 +172,11 @@ function Write() {
                 {timer.started && (
                   <button className="btn sm" onClick={timer.reset}>
                     Reset
+                  </button>
+                )}
+                {!timer.started && (
+                  <button className="btn sm" onClick={() => setShowTimer(false)}>
+                    Hide
                   </button>
                 )}
               </div>
