@@ -126,7 +126,7 @@ function Inbox() {
                 {yearAgo.map((t) => {
                   const years = new Date().getFullYear() - new Date(t.created_at).getFullYear();
                   return (
-                    <article key={t.id} className="card back-card" style={{ boxShadow: "3px 3px 0 var(--lilac)" }}>
+                    <article key={t.id} className="card back-card">
                       <div className="between">
                         <strong style={{ fontWeight: 600 }}>{years === 1 ? "A year ago today" : `${years} years ago today`}</strong>
                         <span className="small muted">{day(t.created_at)}</span>

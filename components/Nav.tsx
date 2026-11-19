@@ -6,9 +6,9 @@ import Icon from "./Icon";
 const items = [
   { href: "/", label: "Home" },
   { href: "/thoughts/", label: "Thoughts", also: ["/thought/", "/threads/", "/thread/", "/discarded/", "/review/"] },
-  { href: "/search/", label: "Search", search: true },
+  { href: "/new/", label: "New thought", plus: true, also: ["/write/"] },
   { href: "/interests/", label: "Interests", also: ["/interest/", "/collections/", "/collection/"] },
-  { href: "/inbox/", label: "Inbox" },
+  { href: "/search/", label: "Search" },
 ];
 
 export default function Nav() {
@@ -19,8 +19,8 @@ export default function Nav() {
       {items.map((it) => {
         const on = it.href === "/" ? norm === "/" : norm.startsWith(it.href) || it.also?.some((a) => norm.startsWith(a));
         return (
-          <Link key={it.href} href={it.href} aria-current={on ? "page" : undefined} className={it.search ? "search" : undefined} aria-label={it.search ? "Search" : undefined}>
-            {it.search ? <Icon name="search" size={20} width={2.4} /> : it.label}
+          <Link key={it.href} href={it.href} aria-current={on ? "page" : undefined} className={it.plus ? "plus" : undefined} aria-label={it.plus ? "New thought" : undefined}>
+            {it.plus ? <Icon name="plus" size={24} width={2.6} /> : it.label}
           </Link>
         );
       })}

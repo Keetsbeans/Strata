@@ -18,12 +18,12 @@ export default function Topics({ value, onChange, known }: { value: string[]; on
     <div className="stack" style={{ gap: 8 }}>
       <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
         {value.map((t) => (
-          <button key={t} type="button" className={"tag " + topicColour(t)} style={{ minHeight: 32, display: "inline-flex", alignItems: "center", gap: 6 }} onClick={() => onChange(value.filter((v) => v !== t))} aria-label={`Remove topic ${t}`}>
+          <button key={t} type="button" className={"tag " + topicColour(t)} style={{ minHeight: 44, display: "inline-flex", alignItems: "center", gap: 6 }} onClick={() => onChange(value.filter((v) => v !== t))} aria-label={`Remove topic ${t}`}>
             {t} <Icon name="close" size={12} width={2.6} />
           </button>
         ))}
         {!adding && (
-          <button type="button" className="tag" style={{ minHeight: 32, borderStyle: "dashed", background: "transparent", fontWeight: 500 }} onClick={() => setAdding(true)}>
+          <button type="button" className="tag" style={{ minHeight: 44, borderStyle: "dashed", background: "transparent", fontWeight: 500 }} onClick={() => setAdding(true)}>
             + Add topic
           </button>
         )}
@@ -37,7 +37,7 @@ export default function Topics({ value, onChange, known }: { value: string[]; on
           {sugg.length > 0 && (
             <div className="row" style={{ flexWrap: "wrap", gap: 6 }}>
               {sugg.map((s) => (
-                <button key={s} type="button" className={"tag " + topicColour(s)} style={{ minHeight: 32 }} onClick={() => add(s)}>
+                <button key={s} type="button" className={"tag " + topicColour(s)} style={{ minHeight: 44 }} onClick={() => add(s)}>
                   {s}
                 </button>
               ))}

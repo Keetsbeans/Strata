@@ -79,7 +79,7 @@ function Library() {
           <div className="stack" style={{ gap: 8 }}>
             <div className="between">
               <span className="small" style={{ fontWeight: 600 }}>In the mood for</span>
-              <button className="link small" style={{ minHeight: 32, fontWeight: 500 }} onClick={() => setEditing(true)}>
+              <button className="link small" style={{ minHeight: 44, fontWeight: 500 }} onClick={() => setEditing(true)}>
                 Edit moods
               </button>
             </div>

@@ -87,9 +87,10 @@ function Thoughts() {
               Cancel
             </button>
           ) : (
-            <Link className="btn" href="/review/">
-              Flip through
-            </Link>
+            <span className="row" style={{ gap: 8 }}>
+              <Link className="btn sm" href="/inbox/">Inbox</Link>
+              <Link className="btn sm" href="/review/">Flip through</Link>
+            </span>
           )}
         </header>
         <ThoughtTabs on={filter} unsorted={unsorted.length} unfinished={unfinished.length} />
@@ -139,7 +140,7 @@ function Thoughts() {
           </div>
         )}
         {!selecting && (
-          <Link href="/discarded/" className="small muted" style={{ alignSelf: "center", padding: 12 }}>
+          <Link href="/discarded/" className="small muted" style={{ alignSelf: "center", padding: "0 12px", minHeight: 44, display: "inline-flex", alignItems: "center" }}>
             Discarded thoughts
           </Link>
         )}

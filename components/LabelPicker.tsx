@@ -16,7 +16,7 @@ export default function LabelPicker({ choices, chosen, onAdd, placeholder, dot }
     <div className="stack" style={{ gap: 8 }}>
       <div className="row" style={{ flexWrap: "wrap", gap: 6 }}>
         {choices.filter((c) => !has(c)).map((c) => (
-          <button key={c} type="button" className="mood-chip" style={{ minHeight: 34 }} onClick={() => onAdd(c)}>
+          <button key={c} type="button" className="mood-chip" style={{ minHeight: 44 }} onClick={() => onAdd(c)}>
             {dot && <i style={{ background: dot(c) }} />}
             {c}
           </button>

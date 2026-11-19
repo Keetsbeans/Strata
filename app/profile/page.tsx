@@ -70,7 +70,7 @@ export default function Profile() {
         <span style={{ width: 48 }} />
       </header>
 
-      <section className="card stack has-mascot" style={{ alignItems: "center", textAlign: "center", gap: 8, padding: "20px 16px", boxShadow: "4px 4px 0 var(--lilac)" }}>
+      <section className="card stack has-mascot" style={{ alignItems: "center", textAlign: "center", gap: 8, padding: "20px 16px" }}>
         <Mascot size={62} className="card-mascot" arms="wave" eyes="happy" />
         <Avatar size={76} />
         {editing ? (
@@ -85,7 +85,7 @@ export default function Profile() {
         ) : (
           <>
             <strong style={{ fontSize: 22, fontWeight: 600 }}>{name || "Add your name"}</strong>
-            <button className="link small" style={{ minHeight: 32, fontWeight: 500 }} onClick={() => (setDraft(name), setEditing(true))}>
+            <button className="link small" style={{ minHeight: 44, fontWeight: 500 }} onClick={() => (setDraft(name), setEditing(true))}>
               {name ? "Change name" : "Add a name"}
             </button>
           </>

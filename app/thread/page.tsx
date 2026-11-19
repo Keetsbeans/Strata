@@ -89,7 +89,7 @@ function ThreadView() {
       <div className="row">
         <button
           className={"tag" + (thread.state === "ongoing" ? " butter" : "")}
-          style={{ minHeight: 32 }}
+          style={{ minHeight: 44 }}
           onClick={async () => (await store.updateThread(thread.id, { state: thread.state === "ongoing" ? "resting" : "ongoing" }), reload())}
           aria-label={`${thread.state === "ongoing" ? "Ongoing" : "Resting"}. Tap to change`}
         >

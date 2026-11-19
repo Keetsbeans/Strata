@@ -67,7 +67,7 @@ function CollectionView() {
         {entries.length > 0 && (
           <div className="between">
             <h2 style={{ fontSize: 15 }}>On the shelf</h2>
-            <button className="link small" style={{ minHeight: 32 }} onClick={() => setRemoving(!removing)}>
+            <button className="link small" style={{ minHeight: 44 }} onClick={() => setRemoving(!removing)}>
               {removing ? "Done" : "Take things out"}
             </button>
           </div>

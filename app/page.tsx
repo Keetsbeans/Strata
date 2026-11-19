@@ -60,6 +60,7 @@ export default function Home() {
   const last = [...thoughts].sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
   const todayCount = finished.filter((t) => sameDay(new Date(t.created_at), now)).length;
   const first = thoughts.length === 0;
+  const pinCount = (id: string) => finished.filter((t) => t.interest_id === id).length;
   const latestOf = (id: string) => finished.filter((t) => t.thread_id === id)[0];
 
   return (
@@ -68,7 +69,7 @@ export default function Home() {
         <div className="between">
           <span style={{ fontSize: 15, color: "var(--on-dark)" }}>{first ? "Welcome" : hello}</span>
           <Link href="/profile/" className="profile-btn" aria-label="Your profile">
-            <Avatar size={40} />
+            <Avatar size={44} />
           </Link>
         </div>
         <h1 style={{ fontSize: 30, lineHeight: 1.08, letterSpacing: "-0.02em", margin: "10px 0 18px" }}>
@@ -86,11 +87,53 @@ export default function Home() {
             </>
           )}
         </h1>
+        <Link className="btn lilac block new-big" href="/new/">
+          <Icon name="plus" size={20} /> New thought
+        </Link>
+      </header>
+
+      <main className="screen" style={{ paddingTop: 22, minHeight: 0 }}>
+        {first ? (
+          <div className="card" style={{ padding: "18px 18px 16px" }}>
+            <span className="small muted">Your first card</span>
+            <p className="serif" style={{ fontSize: 22, lineHeight: 1.3, margin: "6px 0 14px" }}>
+              What is one thing on your mind right now?
+            </p>
+            <Link className="btn ink block" href="/new/">
+              Write your first thought
+            </Link>
+          </div>
+        ) : (
+          <>
+            {last && !hideLast && (
+              <div className="card has-mascot" style={{ padding: "16px 18px" }}>
+                <Mascot size={62} className="card-mascot" arms="wave" eyes={last.finished ? "happy" : "look"} mouth={last.finished ? "smile" : "o"} />
+                <div className="between">
+                  <strong style={{ fontWeight: 600 }}>{last.finished ? "Pick up where you left off" : "You left this unfinished"}</strong>
+                  <span className="small muted">{stamp(last.updated_at)}</span>
+                </div>
+                <p className="serif" style={{ fontSize: 18, lineHeight: 1.35, margin: "8px 0 14px" }}>
+                  {preview(last.body, 120)}
+                </p>
+                <div className="row">
+                  <Link className="btn ink grow shadow" href={`/write/?id=${last.id}`}>
+                    Keep writing
+                  </Link>
+                  <button className="btn" onClick={() => setHideLast(true)}>
+                    Not now
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        <section className="stack week" style={{ gap: 8 }} aria-label="This month">
         <div className="between" style={{ marginBottom: 10 }}>
           <Link href="/calendar/" className="month-link">
             <Icon name="calendar" size={16} /> {MONTHS_LONG[now.getMonth()]} {now.getFullYear()}
           </Link>
-          <span className="small" style={{ color: "var(--on-dark)" }}>
+          <span className="small muted">
             {todayCount} {todayCount === 1 ? "thought" : "thoughts"} today
           </span>
         </div>
@@ -110,46 +153,8 @@ export default function Home() {
             );
           })}
         </div>
-      </header>
-
-      <main className="screen" style={{ paddingTop: 22, minHeight: 0 }}>
-        {first ? (
-          <div className="card" style={{ padding: "18px 18px 16px", boxShadow: "3px 3px 0 var(--lilac)" }}>
-            <span className="small muted">Your first card</span>
-            <p className="serif" style={{ fontSize: 22, lineHeight: 1.3, margin: "6px 0 14px" }}>
-              What is one thing on your mind right now?
-            </p>
-            <Link className="btn ink block" href="/new/">
-              Write your first thought
-            </Link>
-          </div>
-        ) : (
-          <>
-            {last && !hideLast && (
-              <div className="card has-mascot" style={{ padding: "16px 18px", boxShadow: "3px 3px 0 var(--lilac)" }}>
-                <Mascot size={62} className="card-mascot" arms="wave" eyes={last.finished ? "happy" : "look"} mouth={last.finished ? "smile" : "o"} />
-                <div className="between">
-                  <strong style={{ fontWeight: 600 }}>{last.finished ? "Pick up where you left off" : "You left this unfinished"}</strong>
-                  <span className="small muted">{stamp(last.updated_at)}</span>
-                </div>
-                <p className="serif" style={{ fontSize: 18, lineHeight: 1.35, margin: "8px 0 14px" }}>
-                  {preview(last.body, 120)}
-                </p>
-                <div className="row">
-                  <Link className="btn ink grow" href={`/write/?id=${last.id}`}>
-                    Keep writing
-                  </Link>
-                  <button className="btn" onClick={() => setHideLast(true)}>
-                    Not now
-                  </button>
-                </div>
-              </div>
-            )}
-            <Link className="btn ink block shadow" href="/new/">
-              <Icon name="plus" size={18} /> New thought
-            </Link>
-          </>
-        )}
+          <p className="small muted" style={{ margin: 0 }}>Dots mark days you wrote. Tap a day to see it.</p>
+        </section>
 
         <section className="stack" style={{ gap: 10 }}>
           <h2 style={{ fontSize: 17 }}>Your folders</h2>
@@ -158,14 +163,14 @@ export default function Home() {
             <Folder href="/review/" label="To flip through" count={unsorted.length} icon="flip" colour="var(--butter)" sheet="var(--blue)" />
             <Folder href="/stack/" label="Unfinished" count={drafts.length} icon="unfinished" colour="var(--blue)" sheet="var(--lilac)" />
             <Folder href="/interests/" label="Interests" count={interests.length} icon="interests" colour="var(--lilac)" sheet="var(--butter)" />
-            <Folder href="/collections/" label="Collections" count={collections.length} icon="collections" colour="var(--ink)" sheet="var(--butter)" dark />
+            <Folder href="/collections/" label="Collections" count={collections.length} icon="collections" colour="var(--butter)" sheet="var(--lilac)" />
             <Folder href="/threads/" label="Threads" count={threads.length} icon="threads" colour="var(--card)" sheet="var(--lilac)" />
             <Folder href="/inbox/" label="Inbox" count={back.yearAgo.length + back.waiting.length + links.length} icon="inbox" colour="var(--card)" sheet="var(--butter)" />
           </div>
         </section>
 
         {back.yearAgo.length > 0 && (
-          <Link href="/inbox/" className="card back-card" style={{ textDecoration: "none", boxShadow: "3px 3px 0 var(--butter)" }}>
+          <Link href="/inbox/" className="card back-card" style={{ textDecoration: "none" }}>
             <strong style={{ fontWeight: 600 }}>Coming back to you</strong>
             <p className="serif">“{preview(back.yearAgo[0].body, 110)}”</p>
             <span className="small muted">Written on this day in {new Date(back.yearAgo[0].created_at).getFullYear()}</span>
@@ -180,11 +185,13 @@ export default function Home() {
                 See all
               </Link>
             </div>
+            <p className="small muted" style={{ margin: "-4px 0 0" }}>Films, books, music and articles you saved. Tap one to see the thoughts you pinned to it and what it connects to.</p>
             <div className="pickup" style={{ gap: 12 }}>
               {recentItems.map((i) => (
                 <Link key={i.id} href={`/interest/?id=${i.id}`} className="shelf-item" style={{ flex: "0 0 104px" }}>
                   <Poster src={i.image_url} title={i.title} kind={i.kind} />
                   <span className="small" style={{ fontWeight: 600, lineHeight: 1.2 }}>{i.title}</span>
+                  <span className="small muted">{pinCount(i.id) ? `${pinCount(i.id)} ${pinCount(i.id) === 1 ? "thought" : "thoughts"}` : "No thoughts yet"}</span>
                 </Link>
               ))}
             </div>
