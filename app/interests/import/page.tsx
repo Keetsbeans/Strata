@@ -87,9 +87,20 @@ export default function Import() {
             {done.updated ? `, ${done.updated} you already had` : ""}
             {done.thoughts ? `, and ${done.thoughts} ${done.thoughts === 1 ? "review" : "reviews"} as thoughts` : ""}. Posters and covers fill in as you scroll.
           </p>
-          <Link className="btn ink" style={{ marginTop: 8 }} href={`/interests/?kind=${from === "letterboxd" ? "film" : "book"}`}>
-            See your {F.many}
-          </Link>
+          {done.batch ? (
+            <>
+              <Link className="btn ink" style={{ marginTop: 8 }} href={`/import/?id=${done.batch}`}>
+                Sort them now
+              </Link>
+              <Link className="link small" style={{ minHeight: 44, display: "inline-flex", alignItems: "center" }} href="/inbox/?tab=sort">
+                Later. It waits in your Inbox as one line.
+              </Link>
+            </>
+          ) : (
+            <Link className="btn ink" style={{ marginTop: 8 }} href={`/interests/?kind=${from === "letterboxd" ? "film" : "book"}`}>
+              See your {F.many}
+            </Link>
+          )}
         </div>
       </main>
     );
@@ -157,7 +168,7 @@ export default function Import() {
         Your file is read on this phone. Strata never signs in to Letterboxd or Goodreads. Posters are looked up later by title only.
       </span>
       <button className="btn ink block shadow" disabled={!found || busy} onClick={bring} style={{ minHeight: 52 }}>
-        {busy ? "Bringing them in…" : found ? `Add ${total} ${total === 1 ? F.one : F.many} to my interests` : `Pick your ${F.name} file first`}
+        {busy ? "Bringing them in…" : found ? `Add ${total} ${total === 1 ? F.one : F.many} to Saved` : `Pick your ${F.name} file first`}
       </button>
     </main>
   );

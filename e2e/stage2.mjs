@@ -230,7 +230,7 @@ try {
   await shot("06-inbox-sort");
   await page.locator(".item-row", { hasText: "Slow living" }).getByRole("button", { name: "File it" }).click();
   await page.getByRole("button", { name: "Article" }).click();
-  await page.getByRole("button", { name: /Add to interests/ }).click();
+  await page.getByRole("button", { name: /Save it, / }).click();
   await page.waitForURL(/\/interest\//);
   ok(await seen(page.getByRole("heading", { name: "Slow living" })), "filed link became an article");
 
@@ -259,15 +259,35 @@ try {
   await go("/interests/import/");
   await page.getByLabel("Pick your Letterboxd export file").setInputFiles(join(dir, "letterboxd-export.zip"));
   await page.getByText("Found in your file").waitFor();
-  ok(await seen(page.getByRole("button", { name: "Add 3 films to my interests" })), "3 films found (2 watched, 1 on the watchlist)");
+  ok(await seen(page.getByRole("button", { name: "Add 3 films to Saved" })), "3 films found (2 watched, 1 on the watchlist)");
   await shot("08-import");
-  await page.getByRole("button", { name: "Add 3 films to my interests" }).click();
+  await page.getByRole("button", { name: "Add 3 films to Saved" }).click();
   await page.getByText("Your shelf is in").waitFor();
   ok(await seen(page.getByText(/2 new films, 1 you already had, and 1 review as thoughts/)), "Columbus matched, review became a thought");
+  await page.getByRole("link", { name: /Later/ }).click();
+  await page.waitForURL(/\/inbox\//);
+  await page.locator(".import-line").first().waitFor();
+  ok((await page.locator(".import-line").count()) === 1, "the import is one line in Inbox, not one per film");
+  ok(await seen(page.getByText("You imported 2 films from Letterboxd")), "the line says what came in");
+  await shot("08b-inbox-import");
+  await page.locator(".import-line").click();
+  await page.waitForURL(/\/import\//);
+  ok(await seen(page.getByRole("heading", { name: "2 films from Letterboxd" })), "the import has its own sorting page");
+  await page.locator(".saved-tile").nth(1).waitFor();
+  ok((await page.locator(".saved-tile").count()) === 2, "it shows the films with no mood yet");
+  await page.getByRole("button", { name: "Stalker" }).click();
+  await shot("08c-import-sort");
+  await page.getByRole("region", { name: "Do with the picked things" }).getByRole("button", { name: "Heavy" }).click();
+  ok(await seen(page.getByText("Gave 1 the mood Heavy.")), "gave a mood from the import page");
+  ok((await page.locator(".saved-tile").count()) === 1, "sorted films leave the No mood yet list");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.waitForURL(/\/inbox\//);
+  await page.getByText("Shared to Strata").waitFor();
+  ok(!(await page.locator(".import-line").count()), "Done takes the import off Inbox");
   // importing again adds nothing twice
   await go("/interests/import/");
   await page.getByLabel("Pick your Letterboxd export file").setInputFiles(join(dir, "letterboxd-export.zip"));
-  await page.getByRole("button", { name: "Add 3 films to my interests" }).click();
+  await page.getByRole("button", { name: "Add 3 films to Saved" }).click();
   await page.getByText(/0 new films, 3 you already had\./).waitFor();
   ok(true, "second import adds nothing twice");
   await go("/interests/?kind=film");
@@ -282,7 +302,7 @@ try {
   await go("/interests/import/");
   await page.getByRole("button", { name: /Goodreads/ }).click();
   await page.getByLabel("Pick your Goodreads export file").setInputFiles(join(dir, "goodreads_library_export.csv"));
-  await page.getByRole("button", { name: "Add 2 books to my interests" }).click();
+  await page.getByRole("button", { name: "Add 2 books to Saved" }).click();
   await page.getByText(/1 new book, 1 you already had, and 1 review as thoughts/).waitFor();
   ok(true, "Goodreads shelf in; existing book matched");
 

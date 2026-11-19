@@ -41,8 +41,8 @@ function Inbox() {
   const router = useRouter();
   const params = useSearchParams();
   const { data, error, reload } = useData(async () => {
-    const [thoughts, interests, links] = await Promise.all([store.thoughts(), store.interests(), store.links()]);
-    return { thoughts, interests, links };
+    const [thoughts, interests, links, imports] = await Promise.all([store.thoughts(), store.interests(), store.links(), store.imports()]);
+    return { thoughts, interests, links, imports: imports.filter((b) => !b.done_at) };
   }, [store]);
   const [hidden, setHidden] = useState<string[]>([]);
   const [tab, setTab] = useState<"back" | "sort" | null>(params.get("tab") === "sort" ? "sort" : null);
@@ -64,7 +64,7 @@ function Inbox() {
   const yearAgo = back.yearAgo.filter((t) => !hidden.includes(t.id));
   const waiting = back.waiting.filter((i) => !hidden.includes(i.id));
   const backCount = yearAgo.length + waiting.length;
-  const sortCount = data.links.length;
+  const sortCount = data.links.length + data.imports.length;
   const shown = tab ?? (backCount || !sortCount ? "back" : "sort");
 
   const savePaste = async (e: React.FormEvent) => {
@@ -168,13 +168,34 @@ function Inbox() {
 
             {shown === "sort" && (
               <section className="stack" style={{ gap: 10 }}>
-                {pasteBox}
-                {sortCount > 0 && (
-                  <div className="between">
-                    <h2 style={{ fontSize: 17 }}>Links to sort</h2>
-                    <span className="small muted">Oldest at the bottom</span>
-                  </div>
+                {data.imports.length > 0 && (
+                  <>
+                    <h2 style={{ fontSize: 17 }}>Imports</h2>
+                    {data.imports.map((b) => {
+                      const mine = data.interests.filter((i) => i.import_id === b.id);
+                      const bare = mine.filter((i) => !i.moods.length).length;
+                      const what = mine[0]?.kind === "book" ? (b.count === 1 ? "book" : "books") : b.count === 1 ? "film" : "films";
+                      return (
+                        <Link key={b.id} href={`/import/?id=${b.id}`} className="card row import-line" style={{ textDecoration: "none", gap: 14, alignItems: "center" }}>
+                          <span className="import-stack" aria-hidden="true"><i /><i /></span>
+                          <span className="stack grow" style={{ gap: 2 }}>
+                            <strong style={{ fontWeight: 600, fontSize: 15, lineHeight: 1.25 }}>
+                              You imported {b.count} {what} from {b.source === "letterboxd" ? "Letterboxd" : "Goodreads"}
+                            </strong>
+                            <span className="small muted">
+                              {day(b.created_at)}
+                              {bare ? ` · ${bare} still have no mood` : ""}
+                            </span>
+                            <span className="small" style={{ fontWeight: 600, textDecoration: "underline" }}>Sort them</span>
+                          </span>
+                        </Link>
+                      );
+                    })}
+                    <span className="small muted">Everything in an import is already saved and searchable. This line goes away when you tap Done on its page.</span>
+                  </>
                 )}
+                <h2 style={{ fontSize: 17, marginTop: data.imports.length ? 8 : 0 }}>Shared to Strata</h2>
+                {pasteBox}
                 {data.links.map((l) => {
                   const pic = linkPicture(l.url);
                   const r = recognise(l.url, l.title);
@@ -192,7 +213,7 @@ function Inbox() {
                   );
                 })}
                 {sortCount === 0 && <div className="empty"><h2>Nothing to sort</h2><p>Links you share from other apps, or paste above, land here.</p></div>}
-                {sortCount > 0 && <span className="small muted" style={{ textAlign: "center" }}>Links you share from other apps land here.</span>}
+                {data.links.length > 0 && <span className="small muted" style={{ textAlign: "center" }}>Links you share from other apps land here. Oldest at the bottom.</span>}
               </section>
             )}
           </>
@@ -247,7 +268,7 @@ function FileIt({ link, onClose, onDone }: { link: SavedLink; onClose: () => voi
         </div>
         <div className="stack" style={{ gap: 10, marginTop: 4 }}>
           <button className="btn ink block" disabled={busy} onClick={toInterests}>
-            Add to interests, {KIND_LABEL[kind].want.toLowerCase()}
+            Save it, {KIND_LABEL[kind].want.toLowerCase()}
           </button>
           <button className="btn block" disabled={busy} onClick={async () => (await store.removeLink(link.id), onDone())}>
             Remove from Inbox
