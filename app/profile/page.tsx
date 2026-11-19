@@ -6,6 +6,7 @@ import { useApp } from "../providers";
 import { useData } from "@/lib/useData";
 import { day } from "@/lib/dates";
 import { getName, setName } from "@/lib/profile";
+import { markIntro } from "@/lib/intro";
 import { plainTextZip } from "@/lib/exportText";
 import Icon from "@/components/Icon";
 import Avatar from "@/components/Avatar";
@@ -104,6 +105,13 @@ export default function Profile() {
         <h2 style={{ fontSize: 15 }}>App</h2>
         <Go href="/settings/" icon="settings" title="Settings" sub="Colour theme, app lock, voice typing, writing" />
         <Go href="/calendar/" icon="calendar" title="Calendar" sub="Your thoughts and interests, month by month" />
+        <button className="setting go" onClick={() => (markIntro(false), router.push("/"))} style={{ font: "inherit", color: "inherit", textAlign: "left", width: "100%" }}>
+          <Icon name="restore" size={20} />
+          <span className="grow stack" style={{ gap: 2 }}>
+            <strong style={{ fontWeight: 600, fontSize: 15 }}>Watch the intro again</strong>
+            <span className="small muted">The three opening screens</span>
+          </span>
+        </button>
       </section>
 
       <section className="stack" style={{ gap: 10 }}>

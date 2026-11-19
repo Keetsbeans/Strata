@@ -5,24 +5,20 @@ import { cloudReady } from "@/lib/supabase";
 import { useStartTryOut } from "../providers";
 import { useEffect, useState } from "react";
 import Onboarding from "@/components/Onboarding";
+import { introSeen, markIntro } from "@/lib/intro";
 
-const SEEN = "strata:onboarded";
 
 export default function Welcome() {
   const tryOut = useStartTryOut();
   const [intro, setIntro] = useState(false);
   useEffect(() => {
-    try {
-      setIntro(!localStorage.getItem(SEEN));
-    } catch {}
+    setIntro(!introSeen());
   }, []);
   if (intro)
     return (
       <Onboarding
         onDone={() => {
-          try {
-            localStorage.setItem(SEEN, "1");
-          } catch {}
+          markIntro(true);
           setIntro(false);
         }}
       />

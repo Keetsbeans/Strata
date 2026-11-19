@@ -66,6 +66,7 @@ await ctx.addInitScript(() => {
   if (!sessionStorage.getItem("seeded")) {
     localStorage.setItem("strata:mode", "local");
     localStorage.setItem("strata:voice", "local");
+    localStorage.setItem("strata:onboarded", "1");
     sessionStorage.setItem("seeded", "1");
   }
 });
@@ -288,6 +289,15 @@ try {
   await go("/welcome/");
   ok(!(await page.getByText("Your head is full of things worth keeping.").isVisible()), "opening screens only show once");
   await page.evaluate(() => localStorage.setItem("strata:mode", "local"));
+  await page.evaluate(() => localStorage.removeItem("strata:onboarded"));
+  await go("/");
+  ok(await seen(page.getByText("Your head is full of things worth keeping.")), "people already set up see the opening screens once on Home");
+  await page.getByRole("button", { name: "Skip" }).click();
+  ok(await seen(page.getByRole("link", { name: "Your profile" })), "Skip goes to Home");
+  await go("/profile/");
+  await page.getByRole("button", { name: /Watch the intro again/ }).click();
+  ok(await seen(page.getByText("Your head is full of things worth keeping.")), "Profile can replay the intro");
+  await page.getByRole("button", { name: "Skip" }).click();
 
   await go("/");
   await page.getByRole("link", { name: /20\d\d/ }).first().click();
