@@ -19,9 +19,10 @@ function Calendar() {
   const router = useRouter();
   const q = useSearchParams();
   const today = useMemo(() => new Date(), []);
-  const start = q.get("m") ? new Date(q.get("m") + "-01T12:00") : today;
+  const d = q.get("d") && /^\d{4}-\d{2}-\d{2}$/.test(q.get("d")!) ? new Date(q.get("d") + "T12:00") : null;
+  const start = d ?? (q.get("m") ? new Date(q.get("m") + "-01T12:00") : today);
   const [month, setMonth] = useState(new Date(start.getFullYear(), start.getMonth(), 1));
-  const [picked, setPicked] = useState<Date>(today);
+  const [picked, setPicked] = useState<Date>(d ?? today);
   const { data } = useData(async () => {
     const [thoughts, interests] = await Promise.all([store.thoughts(), store.interests()]);
     return { thoughts: thoughts.filter((t) => t.finished), interests };

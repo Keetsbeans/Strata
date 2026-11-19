@@ -395,3 +395,12 @@ grant select, insert, update, delete on public.interests, public.collections, pu
 
 -- genres on interests (added after stage 2 went live)
 alter table public.interests add column if not exists genres text[] not null default '{}' check (cardinality(genres) <= 20);
+
+-- "Delete my account" on the Profile page. Removes the signed-in person and,
+-- through "on delete cascade", every thought, thread, interest and collection they own.
+create or replace function public.delete_my_account() returns void
+language sql security definer set search_path = public, auth as $$
+  delete from auth.users where id = auth.uid();
+$$;
+revoke all on function public.delete_my_account() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;

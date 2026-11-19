@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "../providers";
 import Icon from "@/components/Icon";
-import Dialog from "@/components/Dialog";
-import { plainTextZip } from "@/lib/exportText";
 import { THEMES, getTheme, setTheme, type ThemeId } from "@/lib/theme";
 import { getVoiceMode, liveSupported, setVoiceMode } from "@/lib/voice";
 import { addFingerprint, fingerprintEnabled, fingerprintSupported, lockEnabled, removeFingerprint, setPin, turnOffLock } from "@/lib/lock";
@@ -31,7 +29,7 @@ function Row({ title, sub, children }: { title: string; sub?: string; children?:
 }
 
 export default function Settings() {
-  const { store, mode, email, signOut } = useApp();
+  useApp();
   const router = useRouter();
   const [lock, setLock] = useState(false);
   const [finger, setFinger] = useState(false);
@@ -42,7 +40,6 @@ export default function Settings() {
   const [pinStep, setPinStep] = useState<null | { first?: string }>(null);
   const [pin, setPinText] = useState("");
   const [msg, setMsg] = useState("");
-  const [leaving, setLeaving] = useState(false);
   const [theme, setThemeState] = useState<ThemeId>("lilac");
 
   useEffect(() => {
@@ -97,15 +94,6 @@ export default function Settings() {
     }
   };
 
-  const exportAll = async () => {
-    const data = await store.exportAll();
-    const zip = plainTextZip(data as Parameters<typeof plainTextZip>[0]);
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([zip as BlobPart], { type: "application/zip" }));
-    a.download = `strata-export-${new Date().toISOString().slice(0, 10)}.zip`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
 
   return (
     <main className="screen no-nav" style={{ gap: 16 }}>
@@ -116,19 +104,6 @@ export default function Settings() {
         <h1 className="h-mid">Settings</h1>
         <span style={{ width: 48 }} />
       </header>
-
-      <section className="stack" style={{ gap: 10 }}>
-        <h2 style={{ fontSize: 15 }}>Account</h2>
-        {mode === "cloud" ? (
-          <Row title="Signed in" sub={email ?? undefined}>
-            <button className="btn sm" onClick={() => setLeaving(true)}>Sign out</button>
-          </Row>
-        ) : (
-          <Row title="Trying it out" sub="Your thoughts live on this phone only, until accounts are switched on.">
-            <button className="btn sm" onClick={() => setLeaving(true)}>Start over</button>
-          </Row>
-        )}
-      </section>
 
       <section className="stack" style={{ gap: 10 }} role="radiogroup" aria-label="Colour theme">
         <h2 style={{ fontSize: 15 }}>Colour theme</h2>
@@ -206,33 +181,9 @@ export default function Settings() {
         )}
       </section>
 
-      <section className="stack" style={{ gap: 10 }}>
-        <h2 style={{ fontSize: 15 }}>Your data</h2>
-        <Row title="Export everything" sub="Every thought, thread, interest and collection, as plain text files anyone can open">
-          <button className="btn sm" onClick={exportAll}>Export</button>
-        </Row>
-        <Link href="/discarded/" className="setting" style={{ textDecoration: "none" }}>
-          <strong className="grow" style={{ fontWeight: 600, fontSize: 15 }}>Discarded thoughts</strong>
-          <Icon name="back" size={18} />
-        </Link>
-      </section>
 
-      <p className="small muted" style={{ textAlign: "center" }}>Strata · stage 2 · Time capsules arrive in the next stage.</p>
+      <p className="small muted" style={{ textAlign: "center" }}>Your account, export and discarded thoughts are on your <Link href="/profile/">Profile</Link>.</p>
 
-      {leaving && (
-        <Dialog
-          title={mode === "cloud" ? "Sign out?" : "Start over?"}
-          body={mode === "cloud" ? "Your thoughts stay safe in your account. The app lock on this phone is switched off." : "Your try-out thoughts on this phone will be erased."}
-          face="asking"
-          onClose={() => setLeaving(false)}
-          actions={
-            <>
-              <button className="btn ink block" onClick={signOut}>{mode === "cloud" ? "Sign out" : "Erase and start over"}</button>
-              <button className="btn block" onClick={() => setLeaving(false)}>Stay</button>
-            </>
-          }
-        />
-      )}
     </main>
   );
 }

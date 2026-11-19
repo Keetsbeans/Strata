@@ -15,6 +15,7 @@ type Ctx = {
   email: string | null;
   startTryOut: () => void;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 };
 
 const AppContext = createContext<Ctx | null>(null);
@@ -116,6 +117,18 @@ export default function Providers({ children }: { children: ReactNode }) {
     setMode(null);
   }, [mode]);
 
+  const deleteAccount = useCallback(async () => {
+    const sb = supabase();
+    if (mode === "cloud" && sb) {
+      const { error } = await sb.rpc("delete_my_account");
+      if (error) throw new Error("Your account could not be deleted. Check your connection and try again.");
+    }
+    try {
+      for (const k of Object.keys(localStorage)) if (k.startsWith("strata:")) localStorage.removeItem(k);
+    } catch {}
+    await signOut();
+  }, [mode, signOut]);
+
   if (mode === "loading") return null;
   if (locked && store)
     return (
@@ -130,7 +143,7 @@ export default function Providers({ children }: { children: ReactNode }) {
     );
   if (!store) return isPublic ? <>{children}</> : null;
   if (isPublic) return null;
-  return <AppContext.Provider value={{ store, mode: mode as "local" | "cloud", email, startTryOut, signOut }}>{children}</AppContext.Provider>;
+  return <AppContext.Provider value={{ store, mode: mode as "local" | "cloud", email, startTryOut, signOut, deleteAccount }}>{children}</AppContext.Provider>;
 }
 
 /** for the welcome screen, which sits outside the signed-in area */

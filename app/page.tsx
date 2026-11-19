@@ -3,10 +3,11 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useApp } from "./providers";
 import { useData } from "@/lib/useData";
-import { DAYS, MONTHS_LONG, sameDay, stamp, day, relDay } from "@/lib/dates";
+import { DAYS, MONTHS_LONG, sameDay, stamp, relDay } from "@/lib/dates";
 import Nav from "@/components/Nav";
 import Mascot from "@/components/Mascot";
 import Icon from "@/components/Icon";
+import Avatar from "@/components/Avatar";
 import { preview } from "@/components/ThoughtCard";
 import Poster from "@/components/Poster";
 import Folder from "@/components/Folder";
@@ -60,8 +61,8 @@ export default function Home() {
       <header className="dark home-head">
         <div className="between">
           <span style={{ fontSize: 15, color: "var(--on-dark)" }}>{first ? "Welcome" : hello}</span>
-          <Link href="/settings/" className="settings-btn">
-            <Icon name="settings" size={18} /> Settings
+          <Link href="/profile/" className="profile-btn" aria-label="Your profile">
+            <Avatar size={40} />
           </Link>
         </div>
         <h1 style={{ fontSize: 30, lineHeight: 1.08, letterSpacing: "-0.02em", margin: "10px 0 18px" }}>
@@ -81,10 +82,10 @@ export default function Home() {
         </h1>
         <div className="between" style={{ marginBottom: 10 }}>
           <Link href="/calendar/" className="month-link">
-            {MONTHS_LONG[now.getMonth()]} {now.getFullYear()}
+            <Icon name="calendar" size={16} /> {MONTHS_LONG[now.getMonth()]} {now.getFullYear()}
           </Link>
           <span className="small" style={{ color: "var(--on-dark)" }}>
-            Today, {day(now)} · {todayCount} {todayCount === 1 ? "thought" : "thoughts"} so far
+            {todayCount} {todayCount === 1 ? "thought" : "thoughts"} today
           </span>
         </div>
         <div className="strip" ref={(el) => {
@@ -95,7 +96,7 @@ export default function Home() {
             const today = sameDay(d, now);
             const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
             return (
-              <Link key={iso} href={`/thoughts/?day=${iso}`} className={"strip-day" + (today ? " today" : "")} aria-label={`${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS_LONG[d.getMonth()]}${has ? ", has thoughts" : ""}`}>
+              <Link key={iso} href={`/calendar/?d=${iso}`} className={"strip-day" + (today ? " today" : "")} aria-label={`${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS_LONG[d.getMonth()]}${has ? ", has thoughts" : ""}`}>
                 <span style={{ fontSize: 11, fontWeight: 500 }}>{DAYS[d.getDay()]}</span>
                 <span style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.1 }}>{d.getDate()}</span>
                 <span className="strip-dot" style={{ visibility: has ? "visible" : "hidden" }} />
@@ -119,7 +120,8 @@ export default function Home() {
         ) : (
           <>
             {last && !hideLast && (
-              <div className="card" style={{ padding: "16px 18px", boxShadow: "3px 3px 0 var(--lilac)" }}>
+              <div className="card has-mascot" style={{ padding: "16px 18px", boxShadow: "3px 3px 0 var(--lilac)" }}>
+                <Mascot size={62} className="card-mascot" arms="wave" eyes={last.finished ? "happy" : "look"} mouth={last.finished ? "smile" : "o"} />
                 <div className="between">
                   <strong style={{ fontWeight: 600 }}>{last.finished ? "Pick up where you left off" : "You left this unfinished"}</strong>
                   <span className="small muted">{stamp(last.updated_at)}</span>

@@ -8,6 +8,8 @@ import { stamp } from "@/lib/dates";
 import Icon from "@/components/Icon";
 import Topics from "@/components/Topics";
 import Mascot from "@/components/Mascot";
+import Buddy from "@/components/Buddy";
+import SwipeCard from "@/components/SwipeCard";
 import { preview } from "@/components/ThoughtCard";
 
 /** Flip through: one unsorted thought at a time. Keep it, skip it, or discard it. */
@@ -18,6 +20,7 @@ export default function Review() {
   const [i, setI] = useState(0);
   const [known, setKnown] = useState<string[]>([]);
   const [topics, setTopics] = useState<string[]>([]);
+  const [lean, setLean] = useState(0);
 
   useEffect(() => {
     store.thoughts().then((all) => {
@@ -60,12 +63,14 @@ export default function Review() {
                 <strong>{preview(next.body, 30)}</strong>
               </div>
             )}
-            <article className="card deck-front">
+            <Buddy lean={lean} />
+            <SwipeCard key={t.id} className="card deck-front" label="Thought to sort" onRight={keep} onLeft={() => setI(i + 1)} rightHint="Keep" leftHint="Not sure" onLean={setLean}>
               <span className="small muted">{stamp(t.created_at)}</span>
               <p className="ruled-text" style={{ margin: "10px 0 16px", flexGrow: 1 }}>{t.body}</p>
               <Topics value={topics} onChange={setTopics} known={known} />
-            </article>
+            </SwipeCard>
           </div>
+          <p className="small muted swipe-help">Swipe right to keep, left to decide later</p>
           <div className="review-actions">
             <button className="btn" onClick={discard}>Discard</button>
             <button className="btn" onClick={() => setI(i + 1)} aria-label="Not sure, decide later">Not sure</button>
