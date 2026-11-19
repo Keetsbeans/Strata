@@ -33,7 +33,7 @@ export default function Search() {
     const t = setTimeout(async () => {
       const words = term.toLowerCase().split(/\s+/);
       const [found, all] = await Promise.all([store.search(term), store.interests()]);
-      setItems(all.filter((i) => words.every((w) => (i.title + " " + i.creator + " " + i.moods.join(" ")).toLowerCase().includes(w))).slice(0, 8));
+      setItems(all.filter((i) => words.every((w) => (i.title + " " + i.creator + " " + i.moods.join(" ") + " " + (i.genres ?? []).join(" ")).toLowerCase().includes(w))).slice(0, 8));
       setResults(found);
       const next = [term, ...readRecent().filter((r) => r.toLowerCase() !== term.toLowerCase())].slice(0, 6);
       try {

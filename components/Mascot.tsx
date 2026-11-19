@@ -55,17 +55,17 @@ export default function Mascot({ size = 72, eyes = "dot", mouth = "smile", arms 
       <path d="M46 96v11h-7M74 96v11h7" />
       <g>
         <rect x="20" y="72" width="80" height="24" rx="10" fill="#DCE4F2" />
-        <path d="M32 85h7M45 85h3M78 82h8" stroke="#151515" strokeWidth="2" />
+        <path d="M32 85h7M45 85h3M78 82h8" stroke="currentColor" strokeWidth="2" />
       </g>
       <g>
         <path d={arm} />
         <rect x="25" y="50" width="70" height="24" rx="10" fill="#E6DB86" />
-        <path d="M36 60h4M72 64h9M86 64h2" stroke="#151515" strokeWidth="2" />
+        <path d="M36 60h4M72 64h9M86 64h2" stroke="currentColor" strokeWidth="2" />
       </g>
       <g transform={`rotate(${tilt} 60 37)`}>
         <path d="M60 22q-2-7 4-9" />
         <rect x="30" y="22" width="60" height="30" rx="13" fill="#C3A6F5" />
-        <g stroke="#151515">
+        <g stroke="currentColor">
           {eye}
           {mo}
         </g>

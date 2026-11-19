@@ -62,7 +62,7 @@ export function Dial({ left, total, size = 120 }: { left: number; total: number;
   const ang = (1 - frac) * 360;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
-      <circle cx={size / 2} cy={size / 2} r={r} fill="#FBFAF7" stroke="#151515" strokeWidth="1.5" />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="#FBFAF7" stroke="currentColor" strokeWidth="1.5" />
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -74,9 +74,9 @@ export function Dial({ left, total, size = 120 }: { left: number; total: number;
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
       />
       {Array.from({ length: 12 }, (_, i) => (
-        <line key={i} x1={size / 2} y1={10} x2={size / 2} y2={i % 3 ? 15 : 19} stroke="#151515" strokeWidth="1.5" transform={`rotate(${i * 30} ${size / 2} ${size / 2})`} />
+        <line key={i} x1={size / 2} y1={10} x2={size / 2} y2={i % 3 ? 15 : 19} stroke="currentColor" strokeWidth="1.5" transform={`rotate(${i * 30} ${size / 2} ${size / 2})`} />
       ))}
-      <line x1={size / 2} y1={size / 2} x2={size / 2} y2={22} stroke="#151515" strokeWidth="2.5" strokeLinecap="round" transform={`rotate(${ang} ${size / 2} ${size / 2})`} />
+      <line x1={size / 2} y1={size / 2} x2={size / 2} y2={22} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" transform={`rotate(${ang} ${size / 2} ${size / 2})`} />
       <circle cx={size / 2} cy={size / 2} r="4" fill="#151515" />
     </svg>
   );

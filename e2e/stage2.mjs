@@ -106,6 +106,16 @@ try {
   await page.getByRole("button", { name: "Heavy" }).click();
   ok(await seen(page.getByRole("button", { name: "Remove mood Heavy" })), "mood added");
 
+  await page.getByLabel("Type your own mood").fill("bittersweet");
+  await page.getByLabel("Type your own mood").press("Enter");
+  ok(await seen(page.getByRole("button", { name: "Remove mood Bittersweet" })), "typed a mood of my own");
+  await page.getByRole("button", { name: "Done" }).click();
+  await page.getByRole("button", { name: "Add genre" }).click();
+  await page.getByRole("button", { name: "Drama", exact: true }).click();
+  await page.getByLabel("Type your own genre").fill("Coming of age");
+  await page.getByLabel("Type your own genre").press("Enter");
+  ok(await seen(page.getByRole("button", { name: "Remove genre Coming of age" })), "suggested and typed genres");
+
   console.log("Pin a thought to it");
   await page.getByRole("link", { name: "Write a thought about it" }).click();
   await page.getByText("About: Aftersun").waitFor();
@@ -227,8 +237,21 @@ try {
   console.log("Home and export");
   await go("/");
   ok(await seen(page.getByText("Recent interests")), "Home shows recent interests");
-  ok(await seen(page.getByRole("link", { name: /Collections/ }).first()), "Home has a Collections folder");
+  ok(await seen(page.getByRole("link", { name: /^Collections, \d+$/ })), "Home has a Collections folder");
   await shot("09-home");
+
+  console.log("Settings and colour themes");
+  await page.getByRole("link", { name: "Settings" }).click();
+  await page.getByRole("radio", { name: /Navy and mustard/ }).click();
+  ok((await page.evaluate(() => document.documentElement.dataset.theme)) === "navy", "theme switched");
+  await shot("10-settings-navy");
+  await go("/");
+  ok((await page.evaluate(() => getComputedStyle(document.body).getPropertyValue("--ink").trim())) === "#17223b", "theme kept after reopening");
+  await shot("11-home-navy");
+  await page.evaluate(() => localStorage.setItem("strata:theme", "lilac"));
+  await go("/interests/?kind=film");
+  await page.getByRole("button", { name: "Coming of age" }).click();
+  ok((await page.locator(".shelf-item").count()) === 1, "genre filter on the shelf");
 
   console.log("Remove an item: its thoughts stay");
   await go("/interests/?kind=film");

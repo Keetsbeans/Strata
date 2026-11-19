@@ -8,7 +8,9 @@ import type { Interest } from "@/lib/types";
 import { KIND_LABEL } from "@/lib/types";
 import { details } from "@/lib/interests";
 import { day, time } from "@/lib/dates";
-import { getMoods, moodColour } from "@/lib/moods";
+import { getMoods, moodColour, setMoods } from "@/lib/moods";
+import { genreChoices } from "@/lib/genres";
+import LabelPicker from "@/components/LabelPicker";
 import { usePictureFill } from "@/lib/catalog/pictures";
 import { firstUrl, hostOf } from "@/lib/catalog/links";
 import Icon from "@/components/Icon";
@@ -34,11 +36,12 @@ function ItemView() {
   const router = useRouter();
   const id = useSearchParams().get("id") || "";
   const { data, error, reload, setData } = useData(async () => {
-    const [it, thoughts, collections] = await Promise.all([store.interest(id), store.thoughts(), store.collections()]);
-    return { it, thoughts, collections };
+    const [it, thoughts, collections, all] = await Promise.all([store.interest(id), store.thoughts(), store.collections(), store.interests()]);
+    const usedGenres = [...new Set(all.filter((x) => x.kind === it?.kind).flatMap((x) => x.genres ?? []))];
+    return { it: it && { ...it, genres: it.genres ?? [] }, thoughts, collections, usedGenres };
   }, [store, id]);
   const [moods, setMoodList] = useState<string[]>([]);
-  const [moodOpen, setMoodOpen] = useState(false);
+  const [open, setOpen] = useState<null | "mood" | "genre">(null);
   const [link, setLink] = useState("");
   const [sheet, setSheet] = useState<null | "collection" | "pin" | "remove" | "edit">(null);
   const [edit, setEdit] = useState({ title: "", creator: "", year: "" });
@@ -104,35 +107,54 @@ function ItemView() {
           <h1 className="h-title" style={{ overflowWrap: "anywhere" }}>{it.title}</h1>
           <span className="small muted">{details(it)}</span>
           <Dots value={it.rating} onChange={(r) => patch({ rating: r })} />
-          <div className="row" style={{ flexWrap: "wrap", gap: 6 }}>
-            {it.moods.map((m) => (
-              <button key={m} className="mood" style={{ minHeight: 28 }} aria-label={`Remove mood ${m}`} onClick={() => patch({ moods: it.moods.filter((x) => x !== m) })}>
-                <i style={{ background: moodColour(m) }} />
-                {m}
-              </button>
-            ))}
-            <button className="mood" style={{ borderStyle: "dashed", background: "transparent", fontWeight: 500, minHeight: 28 }} onClick={() => setMoodOpen(!moodOpen)} aria-expanded={moodOpen}>
-              Add mood
-            </button>
-          </div>
         </div>
       </div>
-      {moodOpen && (
-        <div className="chips" style={{ gap: 6 }}>
-          {moods.filter((m) => !it.moods.includes(m)).map((m) => (
-            <button key={m} className="mood-chip" onClick={() => (patch({ moods: [...it.moods, m] }), setMoodOpen(false))}>
-              <i style={{ background: moodColour(m) }} />
-              {m}
-            </button>
-          ))}
-        </div>
-      )}
+
+      <section className="stack" style={{ gap: 10 }} aria-label="Mood and genre">
+        {(["mood", "genre"] as const).map((which) => {
+          const list = which === "mood" ? it.moods : it.genres;
+          const field = which === "mood" ? "moods" : "genres";
+          return (
+            <div key={which} className="stack" style={{ gap: 8 }}>
+              <div className="row" style={{ flexWrap: "wrap", gap: 6 }}>
+                <span className="small" style={{ fontWeight: 600, width: 48 }}>{which === "mood" ? "Mood" : "Genre"}</span>
+                {list.map((m) => (
+                  <button key={m} className="mood" style={{ minHeight: 30 }} aria-label={`Remove ${which} ${m}`} onClick={() => patch({ [field]: list.filter((x) => x !== m) })}>
+                    {which === "mood" && <i style={{ background: moodColour(m) }} />}
+                    {m}
+                    <span aria-hidden="true" style={{ marginLeft: 2, opacity: 0.6 }}>×</span>
+                  </button>
+                ))}
+                <button className="mood" style={{ borderStyle: "dashed", background: "transparent", fontWeight: 500, minHeight: 30 }} onClick={() => setOpen(open === which ? null : which)} aria-expanded={open === which}>
+                  {open === which ? "Done" : which === "mood" ? "Add mood" : "Add genre"}
+                </button>
+              </div>
+              {open === which && (
+                <LabelPicker
+                  choices={which === "mood" ? moods : genreChoices(it.kind, data.usedGenres)}
+                  chosen={list}
+                  dot={which === "mood" ? moodColour : undefined}
+                  placeholder={which === "mood" ? "Type your own mood" : "Type your own genre"}
+                  onAdd={(l) => {
+                    if (which === "mood" && !moods.some((m) => m.toLowerCase() === l.toLowerCase())) {
+                      const next = [...moods, l];
+                      setMoods(next);
+                      setMoodList(next);
+                    }
+                    patch({ [field]: [...list, l] });
+                  }}
+                />
+              )}
+            </div>
+          );
+        })}
+      </section>
 
       <section aria-label="Links" className="stack" style={{ gap: 8 }}>
         {it.links.map((l, i) => (
           <div key={l.url + i} className="item-row" style={{ paddingRight: 6 }}>
             <span className="link-tile" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#151515" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>
             </span>
             <a className="grow" href={l.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
               <strong>{l.title || hostOf(l.url)}</strong>

@@ -63,6 +63,8 @@ export type Interest = {
   /** 1 to 5, or null */
   rating: number | null;
   moods: string[];
+  /** what kind of film, book or music it is; suggested ones or the person's own */
+  genres: string[];
   favourite: boolean;
   links: InterestLink[];
   created_at: string;

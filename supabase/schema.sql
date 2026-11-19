@@ -392,3 +392,6 @@ revoke all on public.interests, public.collections, public.collection_items, pub
 grant select, insert, update, delete on public.interests, public.collections, public.collection_items, public.saved_links to authenticated;
 
 -- deleting an item keeps its thoughts (they are just unpinned, by "on delete set null")
+
+-- genres on interests (added after stage 2 went live)
+alter table public.interests add column if not exists genres text[] not null default '{}' check (cardinality(genres) <= 20);

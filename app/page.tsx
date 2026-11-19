@@ -9,6 +9,7 @@ import Mascot from "@/components/Mascot";
 import Icon from "@/components/Icon";
 import { preview } from "@/components/ThoughtCard";
 import Poster from "@/components/Poster";
+import Folder from "@/components/Folder";
 import { comingBack } from "@/lib/inbox";
 
 function greeting(d: Date) {
@@ -59,8 +60,8 @@ export default function Home() {
       <header className="dark home-head">
         <div className="between">
           <span style={{ fontSize: 15, color: "var(--on-dark)" }}>{first ? "Welcome" : hello}</span>
-          <Link href="/settings/" className="avatar" aria-label="Settings">
-            <Icon name="pen" size={16} />
+          <Link href="/settings/" className="settings-btn">
+            <Icon name="settings" size={18} /> Settings
           </Link>
         </div>
         <h1 style={{ fontSize: 30, lineHeight: 1.08, letterSpacing: "-0.02em", margin: "10px 0 18px" }}>
@@ -146,30 +147,12 @@ export default function Home() {
           <h2 style={{ fontSize: 17 }}>Your folders</h2>
           {first && <span className="small muted">These fill up as you go. Nothing needs sorting today.</span>}
           <div className="folders">
-            <Link href="/review/" className="folder">
-              <span>To flip through</span>
-              <b>{unsorted.length}</b>
-            </Link>
-            <Link href="/thoughts/?filter=unfinished" className="folder">
-              <span>Unfinished</span>
-              <b>{drafts.length}</b>
-            </Link>
-            <Link href="/threads/" className="folder">
-              <span>Threads</span>
-              <b>{threads.length}</b>
-            </Link>
-            <Link href="/interests/" className="folder">
-              <span>Interests</span>
-              <b>{interests.length}</b>
-            </Link>
-            <Link href="/collections/" className="folder">
-              <span>Collections</span>
-              <b>{collections.length}</b>
-            </Link>
-            <Link href="/inbox/" className="folder">
-              <span>Inbox</span>
-              <b>{back.yearAgo.length + back.waiting.length + links.length}</b>
-            </Link>
+            <Folder href="/review/" label="To flip through" count={unsorted.length} icon="flip" colour="var(--butter)" sheet="var(--blue)" />
+            <Folder href="/thoughts/?filter=unfinished" label="Unfinished" count={drafts.length} icon="unfinished" colour="var(--blue)" sheet="var(--lilac)" />
+            <Folder href="/interests/" label="Interests" count={interests.length} icon="interests" colour="var(--lilac)" sheet="var(--butter)" />
+            <Folder href="/collections/" label="Collections" count={collections.length} icon="collections" colour="var(--ink)" sheet="var(--butter)" dark />
+            <Folder href="/threads/" label="Threads" count={threads.length} icon="threads" colour="var(--card)" sheet="var(--lilac)" />
+            <Folder href="/inbox/" label="Inbox" count={back.yearAgo.length + back.waiting.length + links.length} icon="inbox" colour="var(--card)" sheet="var(--butter)" />
           </div>
         </section>
 

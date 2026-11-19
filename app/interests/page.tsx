@@ -35,10 +35,13 @@ function Library() {
   }, [store]);
   const [moods, setMoodList] = useState<string[]>([]);
   const [mood, setMood] = useState<string | null>(null);
+  const [genre, setGenre] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   useEffect(() => setMoodList(getMoods()), []);
 
-  const shown = data?.items.filter((i) => i.kind === kind && (!mood || i.moods.some((m) => m.toLowerCase() === mood.toLowerCase())));
+  const has = (list: string[] | undefined, x: string | null) => !x || (list ?? []).some((m) => m.toLowerCase() === x.toLowerCase());
+  const shown = data?.items.filter((i) => i.kind === kind && has(i.moods, mood) && has(i.genres, genre));
+  const genres = [...new Set(data?.items.filter((i) => i.kind === kind).flatMap((i) => i.genres ?? []) ?? [])].sort();
   usePictureFill(store, shown, (it) => setData((d) => d && { ...d, items: d.items.map((x) => (x.id === it.id ? { ...it } : x)) }));
 
   if (error) return <main className="screen"><p className="error">{error}</p><Nav /></main>;
@@ -56,7 +59,7 @@ function Library() {
         </header>
         <div className="chips" role="group" aria-label="Kind">
           {KINDS.map((k) => (
-            <button key={k} className="chip" aria-pressed={k === kind} onClick={() => router.replace(`/interests/?kind=${k}`)}>
+            <button key={k} className="chip" aria-pressed={k === kind} onClick={() => (setGenre(null), router.replace(`/interests/?kind=${k}`))}>
               {KIND_LABEL[k].many}
               {data && count(k) > 0 && <span className="small" style={{ marginLeft: 6, opacity: 0.75 }}>{count(k)}</span>}
             </button>
@@ -88,6 +91,18 @@ function Library() {
                 </button>
               ))}
             </div>
+            {genres.length > 0 && (
+              <>
+                <span className="small" style={{ fontWeight: 600, marginTop: 4 }}>Genre</span>
+                <div className="chips" style={{ gap: 6 }}>
+                  {genres.map((g) => (
+                    <button key={g} className="mood-chip" aria-pressed={genre === g} onClick={() => setGenre(genre === g ? null : g)}>
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
         {data && shown && shown.length > 0 && (
@@ -108,9 +123,9 @@ function Library() {
         )}
         {data && shown?.length === 0 && count(kind) > 0 && (
           <div className="empty">
-            <h2>Nothing {mood?.toLowerCase()} yet</h2>
-            <p>Give an item the mood “{mood}” on its page and it shows up here.</p>
-            <button className="btn" onClick={() => setMood(null)}>Show all {L.many.toLowerCase()}</button>
+            <h2>Nothing matches yet</h2>
+            <p>Give an item {[mood && `the mood “${mood}”`, genre && `the genre “${genre}”`].filter(Boolean).join(" and ")} on its page and it shows up here.</p>
+            <button className="btn" onClick={() => (setMood(null), setGenre(null))}>Show all {L.many.toLowerCase()}</button>
           </div>
         )}
         {data && count(kind) === 0 && (
