@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useApp } from "./providers";
 import { useData } from "@/lib/useData";
 import { DAYS, MONTHS_LONG, sameDay, stamp, relDay } from "@/lib/dates";
@@ -12,6 +12,8 @@ import { preview } from "@/components/ThoughtCard";
 import Poster from "@/components/Poster";
 import Folder from "@/components/Folder";
 import { comingBack } from "@/lib/inbox";
+import { introSeen, markIntro } from "@/lib/intro";
+import Onboarding from "@/components/Onboarding";
 
 function greeting(d: Date) {
   const h = d.getHours();
@@ -28,6 +30,9 @@ export default function Home() {
     return { thoughts, threads, interests, collections, links };
   }, [store]);
   const [hideLast, setHideLast] = useState(false);
+  // people who set up before the opening screens existed, or who asked to see them again
+  const [intro, setIntro] = useState(false);
+  useEffect(() => setIntro(!introSeen()), []);
   const now = useMemo(() => new Date(), []);
   const [hello, when] = greeting(now);
 
@@ -41,6 +46,7 @@ export default function Home() {
     return out;
   }, [now]);
 
+  if (intro) return <Onboarding onDone={() => (markIntro(true), setIntro(false))} />;
   if (error) return <main className="screen"><p className="error">{error}</p><Nav /></main>;
   if (!data) return <main className="screen"><Nav /></main>;
 
