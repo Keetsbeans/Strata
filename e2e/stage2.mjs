@@ -282,7 +282,8 @@ try {
     for (const k of ["strata:onboarded", "strata:mode", "strata:try:v1"]) localStorage.removeItem(k);
   });
   await go("/welcome/");
-  ok(await seen(page.getByText("Your head is full of things worth keeping.")), "first opening screen shows for someone new");
+  ok(await seen(page.getByText("hi!")), "the splash: the mascot builds itself and says hi");
+  ok(await seen(page.getByText("It all lands at once.")), "then the first opening screen shows for someone new");
   await shot("20-onboarding-1");
   await page.getByRole("button", { name: "Next" }).click();
   ok(await seen(page.getByText("Catch them as they come.")), "second opening screen");
@@ -310,7 +311,7 @@ try {
   await page.getByRole("button", { name: "Save", exact: true }).click();
   ok(await seen(page.getByText("A second one.")), "after that, saving does not ask again");
   await go("/welcome/");
-  ok(!(await page.getByText("Your head is full of things worth keeping.").isVisible()), "opening screens only show once");
+  ok(!(await page.getByText("It all lands at once.").isVisible()), "opening screens only show once");
   await page.evaluate(() => {
     localStorage.setItem("strata:try:v1", localStorage.getItem("e2e:keep"));
     localStorage.removeItem("e2e:keep");
@@ -318,12 +319,12 @@ try {
   });
   await page.evaluate(() => localStorage.removeItem("strata:onboarded"));
   await go("/");
-  ok(await seen(page.getByText("Your head is full of things worth keeping.")), "people already set up see the opening screens once on Home");
+  ok(await seen(page.getByText("It all lands at once.")), "people already set up see the opening screens once on Home");
   await page.getByRole("button", { name: "Skip" }).click();
   ok(await seen(page.getByRole("link", { name: "Your profile" })), "Skip goes to Home");
   await go("/profile/");
   await page.getByRole("button", { name: /Watch the intro again/ }).click();
-  ok(await seen(page.getByText("Your head is full of things worth keeping.")), "Profile can replay the intro");
+  ok(await seen(page.getByText("It all lands at once.")), "Profile can replay the intro");
   await page.getByRole("button", { name: "Skip" }).click();
 
   await go("/");

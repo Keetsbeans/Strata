@@ -28,9 +28,9 @@ const FLOAT = [
 const DROP_X = [0.05, 0.42, 0.12, 0.5, 0.02, 0.3, 0.18];
 const TIMES = ["Sun 8 Nov", "Mon 9 Nov", "Wed 11 Nov", "Wed 11 Nov", "Fri 13 Nov", "Sat 14 Nov", "Today"];
 const COPY = [
-  { h: "Your head is full of things worth keeping.", p: "Thoughts, films, lines from books. They turn up out of order and drift off again." },
+  { h: "It all lands at once.", p: "A thought, a film, a line from a book. They pile up and get in each other\u2019s way. Go on, give them a nudge." },
   { h: "Catch them as they come.", p: "One tap saves a thought. Pin it to the film, book or song that sparked it, and it shows up on that page too." },
-  { h: "And watch them fall into line.", p: "Sort them when you feel like it. Come back in a year and see how your thinking has moved." },
+  { h: "Now everything has its place.", p: "Each thing keeps its day and its line. Come back in a year and see how your thinking has moved." },
 ];
 const MASCOT = 104;
 
@@ -44,7 +44,32 @@ function calm() {
   }
 }
 
+/** Opening: the mascot builds itself layer by layer, says hi, then hands over to the screens. */
 export default function Onboarding({ onDone }: { onDone: () => void }) {
+  const [splash, setSplash] = useState(true);
+  return splash ? <Splash onDone={() => setSplash(false)} /> : <Screens onDone={onDone} />;
+}
+
+function Splash({ onDone }: { onDone: () => void }) {
+  const [hi, setHi] = useState(false);
+  useEffect(() => {
+    const quick = calm();
+    const a = window.setTimeout(() => setHi(true), quick ? 100 : 1500);
+    const b = window.setTimeout(onDone, quick ? 1200 : 2900);
+    return () => (window.clearTimeout(a), window.clearTimeout(b));
+  }, [onDone]);
+  return (
+    <main className="splash" onClick={onDone} aria-label="Strata is opening. Tap to skip.">
+      <div className="splash-mascot">
+        <Mascot size={150} className="assemble" eyes={hi ? "happy" : "dot"} mouth={hi ? "grin" : "flat"} arms={hi ? "wave" : "down"} line="#FBFAF7" />
+        {hi && <span className="splash-hi">hi!</span>}
+      </div>
+      <span className="splash-name">Strata</span>
+    </main>
+  );
+}
+
+function Screens({ onDone }: { onDone: () => void }) {
   // 0: falling pile. 1: three in line, the rest floating. 1.5: flying into line. 2: all in line.
   const [step, setStep] = useState<0 | 1 | 1.5 | 2>(0);
   const [size, setSize] = useState({ w: 340, h: 380 });
@@ -91,7 +116,8 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
     );
   }, []);
 
-  // screen 1: labels drop in, pile up on the floor and on the mascot, and get pushed by a finger
+  // screen 1: labels drop in, pile up on the floor and on the mascot, and get pushed by a finger.
+  // They are heavy paper cards: they fall, settle, never pass through each other and never leave the stage.
   useEffect(() => {
     if (step !== 0) return;
     const st = stage.current;
@@ -99,83 +125,102 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
     const W = st.clientWidth;
     const H = st.clientHeight;
     const still = calm();
-    const mBox = { x: W - MASCOT, y: H - MASCOT + 10, w: MASCOT, h: MASCOT - 10 };
+    const mBox = { x: W - MASCOT + 8, y: H - MASCOT + 14, w: MASCOT - 16, h: MASCOT - 14 };
+    let row = 0;
+    let rowX = 0;
     bodies.current = LABELS.map((_, i) => {
       const el = els.current[i];
       const w = el?.offsetWidth || 120;
       const h = el?.offsetHeight || 40;
-      const x = Math.min(W - w, DROP_X[i] * W);
-      return { x, y: still ? H - h - (i % 3) * (h + 4) - (i > 2 ? 0 : 0) : -h - i * 70, vx: 0, vy: 0, r: (i % 2 ? 1 : -1) * (6 + i * 2), vr: 0, w, h, on: still };
+      // with reduced motion they start already piled, row by row
+      if (rowX + w > W - MASCOT) (row += 1), (rowX = 0);
+      const rest = { x: rowX, y: H - h - row * (h + 2) };
+      rowX += w + 4;
+      const x = Math.min(W - MASCOT - w, DROP_X[i] * W);
+      return { x: still ? rest.x : Math.max(0, x), y: still ? rest.y : -h - 20, vx: 0, vy: 0, r: still ? 0 : (i % 2 ? 1 : -1) * (3 + (i % 3)), vr: 0, w, h, on: still };
     });
     const born = performance.now();
     let raf = 0;
     let lastHit = 0;
+    const MAXV = 9;
     const tick = (now: number) => {
       const B = bodies.current;
       B.forEach((b, i) => {
-        if (!b.on && now - born > 380 * i + 250) b.on = true;
+        if (!b.on && now - born > 420 * i + 250) b.on = true;
         if (!b.on) return;
-        b.vy += 0.55;
-        b.vx *= 0.96;
-        b.vr *= 0.9;
+        b.vy += 0.45;
+        b.vx *= 0.94;
+        b.vy *= 0.99;
+        b.vx = Math.max(-MAXV, Math.min(MAXV, b.vx));
+        b.vy = Math.max(-MAXV, Math.min(MAXV * 1.6, b.vy));
+        b.vr = b.vr * 0.85 - b.r * 0.02; // tilts settle back towards level
         b.x += b.vx;
         b.y += b.vy;
-        b.r += b.vr;
-        if (b.r > 18) b.r = 18;
-        if (b.r < -18) b.r = -18;
-        // floor and walls
-        if (b.y + b.h > H) {
-          b.y = H - b.h;
-          if (b.vy > 2) b.vr += (Math.random() - 0.5) * 2;
-          b.vy *= -0.3;
-          b.vx *= 0.85;
-        }
-        if (b.x < 0) (b.x = 0), (b.vx = Math.abs(b.vx) * 0.5);
-        if (b.x + b.w > W) (b.x = W - b.w), (b.vx = -Math.abs(b.vx) * 0.5);
-        if (b.y < -b.h * 3) b.y = -b.h * 3;
-        // the mascot is solid: things land on it and it flinches
-        const ox = Math.min(b.x + b.w, mBox.x + mBox.w) - Math.max(b.x, mBox.x);
-        const oy = Math.min(b.y + b.h, mBox.y + mBox.h) - Math.max(b.y, mBox.y);
-        if (ox > 0 && oy > 0) {
-          const speed = Math.hypot(b.vx, b.vy);
-          if (oy < ox) {
-            b.y = b.y < mBox.y ? mBox.y - b.h : mBox.y + mBox.h;
-            b.vy *= -0.35;
-            b.vx += b.x + b.w / 2 < mBox.x + mBox.w / 2 ? -0.6 : 0.6; // slides off the head
-          } else {
-            b.x = b.x < mBox.x ? mBox.x - b.w : mBox.x + mBox.w;
-            b.vx *= -0.4;
-          }
-          if (speed > 2.5 && now - lastHit > 260) {
-            lastHit = now;
-            nudge(speed / 6);
-          }
-        }
+        b.r = Math.max(-7, Math.min(7, b.r + b.vr));
       });
-      // labels push each other apart
-      for (let i = 0; i < B.length; i++)
-        for (let j = i + 1; j < B.length; j++) {
-          const a = B[i];
-          const c = B[j];
-          if (!a.on || !c.on) continue;
-          const ox = Math.min(a.x + a.w, c.x + c.w) - Math.max(a.x, c.x);
-          const oy = Math.min(a.y + a.h, c.y + c.h) - Math.max(a.y, c.y);
-          if (ox <= 0 || oy <= 0) continue;
-          if (oy < ox) {
-            const top = a.y < c.y ? a : c;
-            const bot = top === a ? c : a;
-            top.y -= oy;
-            if (top.vy > 0) top.vy *= -0.2;
-            top.vx += (top.x + top.w / 2 < bot.x + bot.w / 2 ? -0.25 : 0.25);
-          } else {
-            const left = a.x < c.x ? a : c;
-            const right = left === a ? c : a;
-            left.x -= ox / 2;
-            right.x += ox / 2;
-            left.vx -= 0.3;
-            right.vx += 0.3;
+      // several passes so stacks settle without sinking into each other
+      for (let pass = 0; pass < 6; pass++) {
+        for (let i = 0; i < B.length; i++) {
+          const b = B[i];
+          if (!b.on) continue;
+          if (b.y + b.h > H) {
+            b.y = H - b.h;
+            if (b.vy > 3 && pass === 0) b.vr += (Math.random() - 0.5) * 1.5;
+            b.vy = b.vy > 1 ? -b.vy * 0.15 : 0;
+            b.vx *= 0.8;
+          }
+          if (b.y < 0 && b.vy < 0 && b.on && now - born > 420 * i + 900) (b.y = 0), (b.vy = 0);
+          if (b.x < 0) (b.x = 0), (b.vx = Math.abs(b.vx) * 0.3);
+          if (b.x + b.w > W) (b.x = W - b.w), (b.vx = -Math.abs(b.vx) * 0.3);
+          // the mascot is solid: things land on it and slide off, and it flinches
+          const ox = Math.min(b.x + b.w, mBox.x + mBox.w) - Math.max(b.x, mBox.x);
+          const oy = Math.min(b.y + b.h, mBox.y + mBox.h) - Math.max(b.y, mBox.y);
+          if (ox > 0 && oy > 0) {
+            const speed = Math.hypot(b.vx, b.vy);
+            if (oy < ox) {
+              b.y = b.y < mBox.y ? mBox.y - b.h : mBox.y + mBox.h;
+              b.vy = b.vy > 0 ? -b.vy * 0.2 : b.vy;
+              b.vx += b.x + b.w / 2 < mBox.x + mBox.w / 2 ? -0.35 : 0.35;
+            } else {
+              b.x = b.x < mBox.x ? mBox.x - b.w : mBox.x + mBox.w;
+              b.vx *= -0.3;
+            }
+            if (speed > 2.5 && now - lastHit > 300) {
+              lastHit = now;
+              nudge(speed / 7);
+            }
           }
         }
+        for (let i = 0; i < B.length; i++)
+          for (let j = i + 1; j < B.length; j++) {
+            const a = B[i];
+            const c = B[j];
+            if (!a.on || !c.on) continue;
+            const ox = Math.min(a.x + a.w, c.x + c.w) - Math.max(a.x, c.x);
+            const oy = Math.min(a.y + a.h, c.y + c.h) - Math.max(a.y, c.y);
+            if (ox <= 0 || oy <= 0) continue;
+            if (oy < ox) {
+              // one rests on the other
+              const top = a.y < c.y ? a : c;
+              const bot = top === a ? c : a;
+              top.y = bot.y - top.h;
+              if (top.vy > 0) top.vy = 0;
+              if (bot.vy < 0) bot.vy = 0;
+              // overhanging a lot: tip off the edge
+              const overhang = top.x + top.w / 2 - (bot.x + bot.w / 2);
+              if (Math.abs(overhang) > bot.w / 2) top.vx += Math.sign(overhang) * 0.3;
+              top.vx = top.vx * 0.9 + bot.vx * 0.1;
+            } else {
+              const left = a.x < c.x ? a : c;
+              const right = left === a ? c : a;
+              left.x -= ox / 2;
+              right.x += ox / 2;
+              const v = (left.vx + right.vx) / 2;
+              left.vx = Math.min(left.vx, v);
+              right.vx = Math.max(right.vx, v);
+            }
+          }
+      }
       B.forEach((b, i) => {
         const el = els.current[i];
         if (el) el.style.transform = `translate(${b.x}px, ${b.y}px) rotate(${b.r}deg)`;
@@ -186,7 +231,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
     return () => cancelAnimationFrame(raf);
   }, [step, nudge]);
 
-  // a finger moving through the pile
+  // a finger moving through the pile: a gentle shove, heavier for longer labels
   function onMove(e: React.PointerEvent) {
     const st = stage.current;
     if (!st) return;
@@ -195,21 +240,20 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
     const y = e.clientY - rect.top;
     const prev = pointer.current;
     pointer.current = { x, y, t: e.timeStamp };
-    if (step !== 0 || !prev || (e.pointerType !== "mouse" && e.buttons === 0) || (e.pointerType === "mouse" && e.buttons === 0 && e.type !== "pointermove")) return;
-    const dx = x - prev.x;
-    const dy = y - prev.y;
+    if (step !== 0 || !prev || e.buttons === 0) return;
+    const dx = Math.max(-30, Math.min(30, x - prev.x));
+    const dy = Math.max(-30, Math.min(30, y - prev.y));
     const W = st.clientWidth;
     const H = st.clientHeight;
     bodies.current.forEach((b) => {
       if (!b.on) return;
       const cx = Math.max(b.x, Math.min(x, b.x + b.w));
       const cy = Math.max(b.y, Math.min(y, b.y + b.h));
-      const d = Math.hypot(x - cx, y - cy);
-      if (d > 26) return;
-      const away = Math.sign(b.x + b.w / 2 - x) || 1;
-      b.vx += dx * 0.45 + away * 1.2;
-      b.vy += dy * 0.45 - 2.2;
-      b.vr += dx * 0.12;
+      if (Math.hypot(x - cx, y - cy) > 12) return;
+      const mass = Math.max(1, b.w / 110);
+      b.vx += (dx * 0.22) / mass;
+      b.vy += Math.max(-2.5, (dy * 0.18) / mass - 0.6);
+      b.vr += (dx * 0.04) / mass;
     });
     // brushing past the mascot bothers it too
     if (x > W - MASCOT && y > H - MASCOT && Math.hypot(dx, dy) > 4) nudge(0.6);
