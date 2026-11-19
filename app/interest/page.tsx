@@ -7,6 +7,8 @@ import { useData } from "@/lib/useData";
 import type { Interest } from "@/lib/types";
 import { KIND_LABEL } from "@/lib/types";
 import { details } from "@/lib/interests";
+import { connectionsFor } from "@/lib/connections";
+import { preview } from "@/components/ThoughtCard";
 import { day, time } from "@/lib/dates";
 import { getMoods, moodColour, setMoods } from "@/lib/moods";
 import { genreChoices } from "@/lib/genres";
@@ -38,7 +40,8 @@ function ItemView() {
   const { data, error, reload, setData } = useData(async () => {
     const [it, thoughts, collections, all] = await Promise.all([store.interest(id), store.thoughts(), store.collections(), store.interests()]);
     const usedGenres = [...new Set(all.filter((x) => x.kind === it?.kind).flatMap((x) => x.genres ?? []))];
-    return { it: it && { ...it, genres: it.genres ?? [] }, thoughts, collections, usedGenres };
+    const item = it && { ...it, genres: it.genres ?? [] };
+    return { it: item, thoughts, collections, usedGenres, links: item ? connectionsFor(item, all, thoughts, collections) : { items: [], thoughts: [] } };
   }, [store, id]);
   const [moods, setMoodList] = useState<string[]>([]);
   const [open, setOpen] = useState<null | "mood" | "genre">(null);
@@ -119,13 +122,13 @@ function ItemView() {
               <div className="row" style={{ flexWrap: "wrap", gap: 6 }}>
                 <span className="small" style={{ fontWeight: 600, width: 48 }}>{which === "mood" ? "Mood" : "Genre"}</span>
                 {list.map((m) => (
-                  <button key={m} className="mood" style={{ minHeight: 30 }} aria-label={`Remove ${which} ${m}`} onClick={() => patch({ [field]: list.filter((x) => x !== m) })}>
+                  <button key={m} className="mood" style={{ minHeight: 44 }} aria-label={`Remove ${which} ${m}`} onClick={() => patch({ [field]: list.filter((x) => x !== m) })}>
                     {which === "mood" && <i style={{ background: moodColour(m) }} />}
                     {m}
                     <span aria-hidden="true" style={{ marginLeft: 2, opacity: 0.6 }}>×</span>
                   </button>
                 ))}
-                <button className="mood" style={{ borderStyle: "dashed", background: "transparent", fontWeight: 500, minHeight: 30 }} onClick={() => setOpen(open === which ? null : which)} aria-expanded={open === which}>
+                <button className="mood" style={{ borderStyle: "dashed", background: "transparent", fontWeight: 500, minHeight: 44 }} onClick={() => setOpen(open === which ? null : which)} aria-expanded={open === which}>
                   {open === which ? "Done" : which === "mood" ? "Add mood" : "Add genre"}
                 </button>
               </div>
@@ -201,6 +204,40 @@ function ItemView() {
         <button className="link" style={{ fontWeight: 500 }} onClick={() => setSheet("pin")}>
           Pin a thought you already wrote
         </button>
+      </section>
+
+      <section className="stack" style={{ gap: 8 }} aria-label="Connected">
+        <h2 style={{ fontSize: 17, letterSpacing: "-0.01em" }}>Connected</h2>
+        {data.links.items.length + data.links.thoughts.length === 0 ? (
+          <p className="small muted" style={{ margin: 0 }}>
+            Give the thoughts you pin here a topic, or add this to a collection, and things that share them show up here.
+          </p>
+        ) : (
+          <>
+            {data.links.items.length > 0 && (
+              <div className="connected">
+                {data.links.items.map(({ item: o, why }) => (
+                  <Link key={o.id} href={`/interest/?id=${o.id}`} className="shelf-item" style={{ flex: "0 0 104px" }}>
+                    <Poster src={o.image_url} title={o.title} kind={o.kind} />
+                    <span className="small" style={{ fontWeight: 600, lineHeight: 1.2 }}>{o.title}</span>
+                    <span className="small muted">{why}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+            {data.links.thoughts.map(({ thought: t, why }) => (
+              <Link key={t.id} href={`/thought/?id=${t.id}`} className="item-row">
+                <span className="link-tile" aria-hidden="true">
+                  <Icon name="pen" size={16} />
+                </span>
+                <span className="grow">
+                  <strong>{preview(t.body, 60)}</strong>
+                  <span className="sub">Thought · also about {why}</span>
+                </span>
+              </Link>
+            ))}
+          </>
+        )}
       </section>
 
       <section className="stack" style={{ gap: 8 }}>

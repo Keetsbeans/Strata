@@ -132,7 +132,7 @@ try {
   await shot("03-film-page");
 
   console.log("Collections and Pick up again");
-  await page.getByRole("link", { name: /Films that stayed with me/ }).click();
+  await page.locator("a.card[href*=\"/collection/\"]", { hasText: "Films that stayed with me" }).click();
   await page.waitForURL(/\/collection\//);
   await page.getByRole("heading", { name: /Pick up again|From further back/ }).waitFor();
   ok(true, "Pick up again row on the collection");
@@ -340,6 +340,38 @@ try {
   ok((await page.locator(".mascot.live").count()) > 0, "mascot moves on screen");
   await go("/");
   ok(await seen(page.locator(".has-mascot .card-mascot")), "mascot waves from the Pick up card on Home");
+
+  console.log("Labels and tap sizes");
+  const audit = async () =>
+    page.evaluate(() => {
+      const out = { unnamed: [], small: [] };
+      for (const el of document.querySelectorAll("a[href], button, [role=button], input, select, textarea")) {
+        const r = (el.tagName === "INPUT" && el.closest("label")) ? el.closest("label").getBoundingClientRect() : el.getBoundingClientRect();
+        if (!r.width || !r.height || getComputedStyle(el).visibility === "hidden") continue;
+        const name = (el.getAttribute("aria-label") || el.textContent || el.getAttribute("title") || el.getAttribute("placeholder") || (el.labels && el.labels[0]?.textContent) || "").trim();
+        const tag = el.tagName.toLowerCase() + (el.className && typeof el.className === "string" ? "." + el.className.split(" ")[0] : "") + " “" + name.slice(0, 30) + "”";
+        if (!name && !el.closest("[aria-hidden=true]")) out.unnamed.push(tag);
+        const inText = el.closest("p") && el.tagName === "A";
+        if (!inText && (r.height < 43.5 || r.width < 43.5) && el.type !== "file" && el.type !== "hidden") out.small.push(tag + " " + Math.round(r.width) + "x" + Math.round(r.height));
+      }
+      return out;
+    });
+  const found = { unnamed: new Set(), small: new Set() };
+  for (const path of ["/", "/thoughts/", "/review/", "/stack/", "/calendar/", "/interests/", "/interests/?kind=book", "/collections/", "/inbox/", "/search/", "/profile/", "/settings/", "/new/", "/threads/", "/discarded/"]) {
+    await go(path);
+    await page.waitForTimeout(150);
+    const a = await audit();
+    a.unnamed.forEach((x) => found.unnamed.add(path + " " + x));
+    a.small.forEach((x) => found.small.add(path + " " + x));
+  }
+  await go("/interests/");
+  await page.locator(".shelf-item").first().click();
+  await page.waitForURL(/\/interest\//);
+  const ia = await audit();
+  ia.unnamed.forEach((x) => found.unnamed.add("/interest/ " + x));
+  ia.small.forEach((x) => found.small.add("/interest/ " + x));
+  ok(found.unnamed.size === 0, "every button and link has a name" + (found.unnamed.size ? ": " + [...found.unnamed].join(" | ") : ""));
+  ok(found.small.size === 0, "every tap target is at least 44px" + (found.small.size ? ": " + [...found.small].join(" | ") : ""));
 
   ok(errors.length === 0, "no page errors" + (errors.length ? ": " + errors.join(" | ") : ""));
   console.log("\nAll stage 2 checks passed.");

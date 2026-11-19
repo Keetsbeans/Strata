@@ -136,7 +136,7 @@ export default function Import() {
       </label>
       {error && <p className="error" role="alert">{error}</p>}
       {found && (
-        <section aria-label="What we found" className="card stack" style={{ gap: 10, boxShadow: "3px 3px 0 var(--lilac)" }}>
+        <section aria-label="What we found" className="card stack" style={{ gap: 10 }}>
           <strong style={{ fontSize: 15, fontWeight: 600 }}>Found in your file</strong>
           <div className="row" style={{ gap: 8, alignItems: "stretch" }}>
             <span className="stat" style={{ background: "var(--blue)" }}><strong>{found.done}</strong><span className="small">{F.things[0]}</span></span>
