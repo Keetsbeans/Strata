@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useApp } from "../providers";
 import { takeUndo, useData, type Undo } from "@/lib/useData";
@@ -11,6 +11,7 @@ import ThoughtTabs from "@/components/ThoughtTabs";
 import Toast from "@/components/Toast";
 import ThreadPicker from "@/components/ThreadPicker";
 import Mascot from "@/components/Mascot";
+import PickUpRow from "@/components/PickUpRow";
 
 function Thoughts() {
   const { store } = useApp();
@@ -22,6 +23,7 @@ function Thoughts() {
   const [picked, setPicked] = useState<string[]>([]);
   const [undo, setUndo] = useState<Undo | null>(null);
   const [toThread, setToThread] = useState(false);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setUndo(takeUndo()), []);
   useEffect(() => {
@@ -96,8 +98,11 @@ function Thoughts() {
             Showing one day only. Show every day
           </Link>
         )}
+        {filter === "all" && !dayParam && !selecting && (
+          <PickUpRow thoughts={data} onViewMore={() => listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} />
+        )}
         {list.length > 0 && (
-          <div className="between" style={{ margin: "-6px 0 -8px" }}>
+          <div className="between" ref={listRef} style={{ margin: "-6px 0 -8px", scrollMarginTop: 16 }}>
             <span className="muted" style={{ fontSize: 13 }}>
               {selecting ? "Tap a thought to tick it" : label}
             </span>

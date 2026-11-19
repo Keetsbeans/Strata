@@ -23,7 +23,7 @@ export default function Home() {
     const [thoughts, threads] = await Promise.all([store.thoughts(), store.threads()]);
     return { thoughts, threads };
   }, [store]);
-  const [hideDraft, setHideDraft] = useState(false);
+  const [hideLast, setHideLast] = useState(false);
   const now = useMemo(() => new Date(), []);
   const [hello, when] = greeting(now);
 
@@ -44,6 +44,8 @@ export default function Home() {
   const finished = thoughts.filter((t) => t.finished);
   const drafts = thoughts.filter((t) => !t.finished).sort((a, b) => b.updated_at.localeCompare(a.updated_at));
   const unsorted = finished.filter((t) => !t.topics.length && !t.kept);
+  // the one note you worked on last, finished or not
+  const last = [...thoughts].sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
   const todayCount = finished.filter((t) => sameDay(new Date(t.created_at), now)).length;
   const first = thoughts.length === 0;
   const latestOf = (id: string) => finished.filter((t) => t.thread_id === id)[0];
@@ -111,20 +113,20 @@ export default function Home() {
           </div>
         ) : (
           <>
-            {drafts[0] && !hideDraft && (
+            {last && !hideLast && (
               <div className="card" style={{ padding: "16px 18px", boxShadow: "3px 3px 0 var(--lilac)" }}>
                 <div className="between">
-                  <strong style={{ fontWeight: 600 }}>You left this unfinished</strong>
-                  <span className="small muted">{stamp(drafts[0].updated_at)}</span>
+                  <strong style={{ fontWeight: 600 }}>{last.finished ? "Pick up where you left off" : "You left this unfinished"}</strong>
+                  <span className="small muted">{stamp(last.updated_at)}</span>
                 </div>
                 <p className="serif" style={{ fontSize: 18, lineHeight: 1.35, margin: "8px 0 14px" }}>
-                  {preview(drafts[0].body, 120)}
+                  {preview(last.body, 120)}
                 </p>
                 <div className="row">
-                  <Link className="btn ink grow" href={`/write/?id=${drafts[0].id}`}>
+                  <Link className="btn ink grow" href={`/write/?id=${last.id}`}>
                     Keep writing
                   </Link>
-                  <button className="btn" onClick={() => setHideDraft(true)}>
+                  <button className="btn" onClick={() => setHideLast(true)}>
                     Not now
                   </button>
                 </div>

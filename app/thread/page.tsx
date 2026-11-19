@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useApp } from "../providers";
 import { useData } from "@/lib/useData";
 import { day, time } from "@/lib/dates";
 import Icon from "@/components/Icon";
 import Dialog, { Choice } from "@/components/Dialog";
+import PickUpRow from "@/components/PickUpRow";
 
 function ThreadView() {
   const { store } = useApp();
@@ -14,15 +15,16 @@ function ThreadView() {
   const id = useSearchParams().get("id") || "";
   const { data, error, reload } = useData(async () => {
     const [thread, all] = await Promise.all([store.thread(id), store.thoughts()]);
-    return { thread, inside: all.filter((t) => t.thread_id === id && t.finished) };
+    return { thread, inside: all.filter((t) => t.thread_id === id && t.finished), every: all.filter((t) => t.thread_id === id) };
   }, [store, id]);
   const [asking, setAsking] = useState(false);
   const [keep, setKeep] = useState(true);
   const [renaming, setRenaming] = useState<string | null>(null);
+  const listRef = useRef<HTMLOListElement>(null);
 
   if (error) return <main className="screen no-nav"><p className="error">{error}</p></main>;
   if (!data) return <main className="screen no-nav" />;
-  const { thread, inside } = data;
+  const { thread, inside, every } = data;
   if (!thread || thread.discarded_at)
     return (
       <main className="screen no-nav">
@@ -98,7 +100,8 @@ function ThreadView() {
           {first ? ` · started ${day(first.created_at, { weekday: false })}` : ""}
         </span>
       </div>
-      <ol className="timeline">
+      <PickUpRow thoughts={every} onViewMore={() => listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} />
+      <ol className="timeline" ref={listRef} style={{ scrollMarginTop: 16 }}>
         {inside.map((t) => (
           <li key={t.id}>
             <span className="tl-dot" aria-hidden="true" />

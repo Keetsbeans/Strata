@@ -7,6 +7,7 @@ import { day, time } from "@/lib/dates";
 import Icon from "@/components/Icon";
 import Dialog from "@/components/Dialog";
 import Topics from "@/components/Topics";
+import Dictate from "@/components/Dictate";
 import { Dial, MinuteWheel, fmt, useTimer } from "@/components/Timer";
 
 const LONG_AT = 320; // characters before a card suggests opening as a page
@@ -119,6 +120,8 @@ function Write() {
           aria-label="Your thought"
         />
       </div>
+
+      <Dictate onText={(t) => setBody((b) => (b && !/\s$/.test(b) ? b + " " : b) + t)} />
 
       <Topics value={topics} onChange={setTopics} known={known} />
 

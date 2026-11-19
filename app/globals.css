@@ -236,3 +236,10 @@ body:has(.lock) { background: var(--ink); }
 .switch span { width: 24px; height: 24px; border-radius: 50%; background: var(--ink); transition: transform 0.15s; }
 .switch[aria-checked="true"] { background: var(--lilac); }
 .switch[aria-checked="true"] span { transform: translateX(22px); }
+.speak { min-height: 56px; font-size: 17px; }
+.listening-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #d64545; margin-right: 4px; animation: pulse 1s infinite; }
+@keyframes pulse { 50% { opacity: 0.3; } }
+.pickup { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -24px; padding: 2px 24px 6px; }
+.pickup::-webkit-scrollbar { display: none; }
+.pickup-card { flex: 0 0 74%; scroll-snap-align: start; display: flex; flex-direction: column; gap: 6px; text-decoration: none; min-height: 116px; box-shadow: 3px 3px 0 var(--lilac); text-align: left; }
+.pickup-more { flex-basis: 40%; align-items: center; justify-content: center; text-align: center; border-style: dashed; background: transparent; box-shadow: none; }

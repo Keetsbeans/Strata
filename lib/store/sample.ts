@@ -6,7 +6,9 @@ export function sampleData() {
     const d = new Date();
     d.setDate(d.getDate() - days);
     d.setHours(h, m, 0, 0);
-    return d.toISOString();
+    // never in the future, even early in the morning
+    const latest = Date.now() - (days + 1) * 3600000;
+    return new Date(Math.min(d.getTime(), latest)).toISOString();
   };
   const thread: Thread = { id: "sample-thread", title: "On routine and freedom", state: "ongoing", created_at: ago(9, 22, 30), discarded_at: null, released_ids: [] };
   const t = (id: string, body: string, topics: string[], when: string, extra: Partial<Thought> = {}): Thought => ({
