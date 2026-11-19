@@ -97,7 +97,7 @@ function Share() {
       </label>
       <div className="stack" role="radiogroup" aria-label="Where should it go?" style={{ gap: 8 }}>
         <strong style={{ fontSize: 15, fontWeight: 600 }}>Where should it go?</strong>
-        <Choice on={to === "interests"} title={`Interests, ${L.want.toLowerCase()}`} sub={`Adds it to your ${L.many.toLowerCase()}, with its ${r2.kind === "film" ? "poster" : r2.kind === "article" ? "link" : "cover"}.`} onClick={() => setTo("interests")} />
+        <Choice on={to === "interests"} title={`Saved, ${L.want.toLowerCase()}`} sub={`Adds it to your ${L.many.toLowerCase()}, with its ${r2.kind === "film" ? "poster" : r2.kind === "article" ? "link" : "cover"}.`} onClick={() => setTo("interests")} />
         <Choice on={to === "inbox"} title="Inbox, sort later" sub="Waits under To sort until you file it." onClick={() => setTo("inbox")} />
       </div>
       <label className="stack" style={{ gap: 6 }}>

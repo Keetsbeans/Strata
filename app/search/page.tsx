@@ -59,7 +59,7 @@ export default function Search() {
         <div className="row">
           <label className="search-box grow">
             <Icon name="search" size={18} />
-            <input type="search" autoFocus placeholder="Search thoughts and interests" aria-label="Search your archive" value={q} onChange={(e) => setQ(e.target.value)} />
+            <input type="search" autoFocus placeholder="Search thoughts and saved things" aria-label="Search your archive" value={q} onChange={(e) => setQ(e.target.value)} />
           </label>
           <Link className="btn" href="/">
             Close
@@ -78,7 +78,7 @@ export default function Search() {
         )}
         {results && items.length > 0 && (
           <div className="stack" style={{ gap: 8 }}>
-            <span className="muted" style={{ fontSize: 13 }}>In your interests</span>
+            <span className="muted" style={{ fontSize: 13 }}>In what you saved</span>
             {items.map((i) => (
               <Link key={i.id} href={`/interest/?id=${i.id}`} className="item-row">
                 <Poster src={i.image_url} title={i.title} kind={i.kind} className="thumb" />

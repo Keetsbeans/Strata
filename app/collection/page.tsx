@@ -1,110 +1,144 @@
 "use client";
 import Link from "next/link";
-import { Suspense, useRef, useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useApp } from "../providers";
 import { useData } from "@/lib/useData";
 import { details } from "@/lib/interests";
-import { KIND_LABEL } from "@/lib/types";
-import { day } from "@/lib/dates";
+import { getMoods } from "@/lib/moods";
 import { normTitle } from "@/lib/catalog/match";
+import { usePictureFill } from "@/lib/catalog/pictures";
 import Icon from "@/components/Icon";
 import Poster from "@/components/Poster";
-import PickUpRow from "@/components/PickUpRow";
 import Dialog from "@/components/Dialog";
+import Nav from "@/components/Nav";
 import { CollectionForm, contents } from "@/components/CollectionBits";
-import { preview } from "@/components/ThoughtCard";
+import { FilterBar, NO_FILTERS, SavedRow, SavedTile, matches, type Filters } from "@/components/Saved";
 
 function CollectionView() {
   const { store } = useApp();
   const router = useRouter();
   const id = useSearchParams().get("id") || "";
-  const { data, error, reload } = useData(async () => {
-    const [c, interests, thoughts] = await Promise.all([store.collection(id), store.interests(), store.thoughts()]);
-    return { c, interests: new Map(interests.map((i) => [i.id, i])), thoughts: new Map(thoughts.map((t) => [t.id, t])), allInterests: interests, allThoughts: thoughts };
+  const { data, error, reload, setData } = useData(async () => {
+    const [c, interests] = await Promise.all([store.collection(id), store.interests()]);
+    return { c, interests: new Map(interests.map((i) => [i.id, i])), allInterests: interests };
   }, [store, id]);
   const [mode, setMode] = useState<null | "edit" | "add" | "delete">(null);
   const [removing, setRemoving] = useState(false);
+  const [f, setF] = useState<Filters>(NO_FILTERS);
   const [q, setQ] = useState("");
-  const list = useRef<HTMLDivElement>(null);
+  const [moods] = useState(() => (typeof window === "undefined" ? [] : getMoods()));
+  const things = data?.c ? data.c.items.map((x) => ({ x, it: data.interests.get(x.interest_id ?? "") })).filter((e) => !!e.it) : [];
+  usePictureFill(store, things.map((e) => e.it!), (it) => setData((d) => d && { ...d, interests: new Map(d.interests).set(it.id, it) }));
 
-  if (error) return <main className="screen no-nav"><p className="error">{error}</p></main>;
-  if (!data) return <main className="screen no-nav" />;
-  const { c, interests, thoughts } = data;
+  if (error) return <main className="screen"><p className="error">{error}</p><Nav /></main>;
+  if (!data) return <main className="screen"><Nav /></main>;
+  const { c, interests } = data;
   if (!c)
     return (
-      <main className="screen no-nav">
+      <main className="screen">
         <p className="error">This collection isn&apos;t here any more.</p>
         <Link className="btn" href="/collections/">Back to collections</Link>
+        <Nav />
       </main>
     );
 
-  // thoughts in this collection, plus thoughts pinned to its films, books and songs
   const itemIds = new Set(c.items.map((x) => x.interest_id).filter(Boolean));
-  const related = data.allThoughts.filter((t) => t.interest_id && itemIds.has(t.interest_id));
-  const entries = c.items.filter((x) => x.interest_id && interests.has(x.interest_id));
+  const shown = things.filter((e) => matches(e.it!, f));
   const term = normTitle(q);
+  const filtered = shown.length !== things.length;
+  const sub = (it: NonNullable<(typeof things)[number]["it"]>) => [it.year, it.moods[0]].filter(Boolean).join(" · ") || details(it);
 
   return (
-    <main className="screen no-nav">
-      <header className="between">
-        <button className="icon-btn round" aria-label="Back" onClick={() => router.back()}>
-          <Icon name="back" />
-        </button>
-        <span className="h-mid" style={{ fontWeight: 600 }}>Collection</span>
-        <button className="btn sm" onClick={() => setMode("edit")}>Edit</button>
-      </header>
-      <div className="stack" style={{ gap: 6 }}>
-        <h1 className="h-title">{c.title}</h1>
-        {c.note && <p className="serif" style={{ margin: 0, fontSize: 18, lineHeight: 1.35 }}>{c.note}</p>}
-        <span className="small muted">{contents(c.items, interests, thoughts)}</span>
-      </div>
-
-      <PickUpRow thoughts={related} min={3} onViewMore={() => list.current?.scrollIntoView({ behavior: "smooth", block: "start" })} />
-
-      <div className="stack" style={{ gap: 10, scrollMarginTop: 20 }} ref={list}>
-        {entries.length > 0 && (
-          <div className="between">
-            <h2 style={{ fontSize: 15 }}>On the shelf</h2>
+    <>
+      <main className="screen" style={{ gap: 18 }}>
+        <header className="between">
+          <button className="icon-btn round" aria-label="Back" onClick={() => router.push("/collections/")}>
+            <Icon name="back" />
+          </button>
+          <span className="h-mid" style={{ fontWeight: 600 }}>Collection</span>
+          <button className="btn sm" onClick={() => (setQ(""), setMode("add"))}>Add</button>
+        </header>
+        <div className="stack" style={{ gap: 4 }}>
+          <h1 className="h-title">{c.title}</h1>
+          {c.note && <p className="serif" style={{ margin: "2px 0 4px", fontSize: 17, lineHeight: 1.35 }}>{c.note}</p>}
+          <div className="row" style={{ gap: 6, alignItems: "center" }}>
+            <span className="small muted">{contents(c.items, interests)} ·</span>
+            <button className="link small" style={{ minHeight: 44, padding: 0 }} onClick={() => setMode("edit")}>
+              Edit name, note and cover
+            </button>
+          </div>
+        </div>
+        {things.length > 1 && <FilterBar items={things.map((e) => e.it!)} value={f} onChange={setF} moods={moods} />}
+        {things.length > 0 && (
+          <div className="between" style={{ marginTop: -6 }}>
+            <span className="small muted">{filtered ? `${shown.length} of ${things.length}` : `${things.length} ${things.length === 1 ? "thing" : "things"}`}</span>
             <button className="link small" style={{ minHeight: 44 }} onClick={() => setRemoving(!removing)}>
               {removing ? "Done" : "Take things out"}
             </button>
           </div>
         )}
-        {entries.map((x) => {
-          const it = interests.get(x.interest_id!)!;
-          return (
-            <div key={x.id} className="row" style={{ gap: 8 }}>
-              <Link href={`/interest/?id=${it.id}`} className="item-row grow">
-                  <Poster src={it.image_url} title={it.title} kind={it.kind} className="thumb" />
-                  <span className="grow">
-                    <strong>{it.title}</strong>
-                    <span className="sub">
-                      {details(it)} · {it.status === "done" ? KIND_LABEL[it.kind].done.toLowerCase() + (it.done_at ? " " + day(it.done_at, { weekday: false }) : "") : KIND_LABEL[it.kind].want.toLowerCase()}
+        {shown.some((e) => e.it!.kind !== "article") && (
+          <div className="saved-grid two">
+            {shown
+              .filter((e) => e.it!.kind !== "article")
+              .map(({ x, it }) =>
+                removing ? (
+                  <button key={x.id} className="saved-tile" aria-label={`Take ${it!.title} out`} onClick={async () => (await store.removeFromCollection(x.id), reload())}>
+                    <span style={{ position: "relative", display: "block" }}>
+                      <Poster src={it!.image_url} title={it!.title} kind={it!.kind} />
+                      <span className="box" style={{ background: "var(--card)" }}><Icon name="close" size={13} /></span>
                     </span>
-                  </span>
-                </Link>
-              {removing && (
-                <button className="icon-btn" aria-label={`Take ${it.title} out`} onClick={async () => (await store.removeFromCollection(x.id), reload())}>
-                  <Icon name="close" size={16} />
-                </button>
+                    <strong>{it!.title}</strong>
+                    <span className="sub">Tap to take it out</span>
+                  </button>
+                ) : (
+                  <SavedTile key={x.id} it={it!} sub={sub(it!)} />
+                ),
               )}
-            </div>
-          );
-        })}
-        {entries.length === 0 && <div className="empty"><h2>An empty shelf</h2><p>Add films, books, songs or links that belong here.</p></div>}
-        <button className="btn block dashed" style={{ fontWeight: 500 }} onClick={() => setMode("add")}>
-          <Icon name="plus" size={18} /> Add something
-        </button>
-      </div>
+          </div>
+        )}
+        {shown.some((e) => e.it!.kind === "article") && (
+          <div className="stack" style={{ gap: 8 }}>
+            {shown
+              .filter((e) => e.it!.kind === "article")
+              .map(({ x, it }) =>
+                removing ? (
+                  <button key={x.id} className="item-row" aria-label={`Take ${it!.title} out`} onClick={async () => (await store.removeFromCollection(x.id), reload())}>
+                    <Poster src={it!.image_url} title={it!.title} kind={it!.kind} className="thumb" />
+                    <span className="grow"><strong>{it!.title}</strong><span className="sub">Tap to take it out</span></span>
+                    <Icon name="close" size={16} />
+                  </button>
+                ) : (
+                  <SavedRow key={x.id} it={it!} />
+                ),
+              )}
+          </div>
+        )}
+        {things.length > 0 && shown.length === 0 && (
+          <div className="empty">
+            <h2>Nothing matches</h2>
+            <button className="btn sm" onClick={() => setF(NO_FILTERS)}>Show all</button>
+          </div>
+        )}
+        {things.length === 0 && (
+          <div className="empty">
+            <h2>An empty collection</h2>
+            <p>Add films, books, songs or links that belong here.</p>
+            <button className="btn ink" onClick={() => setMode("add")}>Add something</button>
+          </div>
+        )}
+      </main>
+      <Nav />
 
       {mode === "edit" && (
         <CollectionForm
           initial={c}
+          covers={things.map((e) => e.it!)}
           onClose={() => setMode(null)}
           onDelete={() => setMode("delete")}
-          onSave={async (title, note) => {
-            await store.updateCollection(c.id, { title, note });
+          onSave={async (title, note, cover_id) => {
+            await store.updateCollection(c.id, { title, note, cover_id });
             setMode(null);
             reload();
           }}
@@ -113,7 +147,7 @@ function CollectionView() {
       {mode === "delete" && (
         <Dialog
           title="Delete this collection?"
-          body="Only the shelf goes. The films, books and songs on it stay where they are."
+          body="Only the collection goes. The films, books and songs in it stay in Everything you saved."
           face="worried"
           onClose={() => setMode(null)}
           actions={
@@ -129,28 +163,29 @@ function CollectionView() {
           <div className="scrim" onClick={() => setMode(null)} />
           <div className="dialog" role="dialog" aria-modal="true" aria-label="Add to this collection" style={{ maxHeight: "84dvh", overflowY: "auto" }}>
             <h2>Add to {c.title}</h2>
-            <input className="input" placeholder="Find" aria-label="Find" value={q} onChange={(e) => setQ(e.target.value)} />
+            <input className="input" placeholder="Find something you saved" aria-label="Find" value={q} onChange={(e) => setQ(e.target.value)} />
             <div className="stack" style={{ gap: 8 }}>
               {data.allInterests
-                  .filter((i) => !itemIds.has(i.id) && (!term || normTitle(i.title).includes(term)))
-                  .slice(0, 40)
-                  .map((i) => (
-                    <button key={i.id} className="item-row" onClick={async () => (await store.addToCollection(c.id, { interest_id: i.id }), reload())}>
-                      <Poster src={i.image_url} title={i.title} kind={i.kind} className="thumb" />
-                      <span className="grow">
-                        <strong>{i.title}</strong>
-                        <span className="sub">{details(i)}</span>
-                      </span>
-                      <Icon name="plus" size={18} />
-                    </button>
-                  ))}
-              {data.allInterests.length === 0 && <span className="muted">Nothing in Interests yet.</span>}
+                .filter((i) => !itemIds.has(i.id) && (!term || normTitle(i.title).includes(term)))
+                .slice(0, 40)
+                .map((i) => (
+                  <button key={i.id} className="item-row" onClick={async () => (await store.addToCollection(c.id, { interest_id: i.id }), reload())}>
+                    <Poster src={i.image_url} title={i.title} kind={i.kind} className="thumb" />
+                    <span className="grow">
+                      <strong>{i.title}</strong>
+                      <span className="sub">{details(i)}</span>
+                    </span>
+                    <Icon name="plus" size={18} />
+                  </button>
+                ))}
+              {data.allInterests.length === 0 && <span className="muted">Nothing saved yet.</span>}
             </div>
+            <Link className="link small" href="/interests/add/?kind=film" style={{ alignSelf: "center", minHeight: 44, display: "inline-flex", alignItems: "center" }}>Save something new first</Link>
             <button className="btn ink block" onClick={() => setMode(null)}>Done</button>
           </div>
         </>
       )}
-    </main>
+    </>
   );
 }
 

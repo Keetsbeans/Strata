@@ -22,31 +22,22 @@ import { CollectionPicker, ThoughtPicker } from "@/components/Pickers";
 
 const THE_DAY = { film: "the day you watched it", book: "the day you finished it", music: "the day you heard it", article: "the day you read it" };
 
-function later(first: string, d: string) {
-  const days = Math.round((new Date(d).getTime() - new Date(first).getTime()) / 86400000);
-  if (days < 1) return "";
-  if (days === 1) return "a day later";
-  if (days < 7) return `${days} days later`;
-  if (days < 14) return "a week later";
-  if (days < 60) return `${Math.round(days / 7)} weeks later`;
-  if (days < 365) return `${Math.round(days / 30)} months later`;
-  return days < 730 ? "a year later" : `${Math.floor(days / 365)} years later`;
-}
 
 function ItemView() {
   const { store } = useApp();
   const router = useRouter();
   const id = useSearchParams().get("id") || "";
   const { data, error, reload, setData } = useData(async () => {
-    const [it, thoughts, collections, all] = await Promise.all([store.interest(id), store.thoughts(), store.collections(), store.interests()]);
+    const [it, thoughts, collections, all, threads] = await Promise.all([store.interest(id), store.thoughts(), store.collections(), store.interests(), store.threads()]);
     const usedGenres = [...new Set(all.filter((x) => x.kind === it?.kind).flatMap((x) => x.genres ?? []))];
     const item = it && { ...it, genres: it.genres ?? [] };
-    return { it: item, thoughts, collections, usedGenres, links: item ? connectionsFor(item, all, thoughts, collections) : { items: [], thoughts: [] } };
+    return { it: item, thoughts, collections, usedGenres, threadTitle: new Map(threads.map((x) => [x.id, x.title])), links: item ? connectionsFor(item, all, thoughts, collections) : { items: [], thoughts: [] } };
   }, [store, id]);
   const [moods, setMoodList] = useState<string[]>([]);
   const [open, setOpen] = useState<null | "mood" | "genre">(null);
   const [link, setLink] = useState("");
   const [sheet, setSheet] = useState<null | "collection" | "pin" | "remove" | "edit">(null);
+  const [allThoughts, setAllThoughts] = useState(false);
   const [edit, setEdit] = useState({ title: "", creator: "", year: "" });
   useEffect(() => setMoodList(getMoods()), []);
 
@@ -59,8 +50,8 @@ function ItemView() {
   if (!it)
     return (
       <main className="screen no-nav">
-        <p className="error">This item isn&apos;t in your interests any more.</p>
-        <Link className="btn" href="/interests/">Back to interests</Link>
+        <p className="error">This isn&apos;t in what you saved any more.</p>
+        <Link className="btn" href="/interests/">Back to Saved</Link>
       </main>
     );
   const L = KIND_LABEL[it.kind];
@@ -110,6 +101,17 @@ function ItemView() {
           <h1 className="h-title" style={{ overflowWrap: "anywhere" }}>{it.title}</h1>
           <span className="small muted">{details(it)}</span>
           <Dots value={it.rating} onChange={(r) => patch({ rating: r })} />
+          {inside.length > 0 && (
+            <p className="small muted" style={{ margin: 0 }}>
+              In:{" "}
+              {inside.map((c, i) => (
+                <span key={c.id}>
+                  {i > 0 && ", "}
+                  <Link href={`/collection/?id=${c.id}`} style={{ color: "var(--ink)" }}>{c.title}</Link>
+                </span>
+              ))}
+            </p>
+          )}
         </div>
       </div>
 
@@ -174,34 +176,38 @@ function ItemView() {
         </form>
       </section>
 
-      <section className="stack" style={{ gap: 12 }}>
-        <h2 style={{ fontSize: 17, letterSpacing: "-0.01em" }}>What you thought, over time</h2>
-        {pinned.length > 0 && (
-          <ol className="timeline">
-            {pinned.map((t) => {
-              const d = new Date(t.created_at);
-              const note = t === oldest ? (it.done_at && day(it.done_at) === day(d) ? THE_DAY[it.kind] : "") : later(oldest.created_at, t.created_at);
-              return (
-                <li key={t.id}>
-                  <span className="tl-dot" aria-hidden="true" />
-                  <Link href={`/thought/?id=${t.id}`} className="card thought-card" style={{ gap: 4 }}>
-                    <span className="small muted">
-                      <strong style={{ color: "var(--ink)" }}>{day(d)}</strong> · {time(d)}
-                      {note ? ` · ${note}` : ""}
-                      {t.source ? ` · from ${t.source === "letterboxd" ? "Letterboxd" : "Goodreads"}` : ""}
-                    </span>
-                    <p>{t.body.length > 280 ? t.body.slice(0, 279) + "…" : t.body}</p>
-                  </Link>
-                </li>
-              );
-            })}
-          </ol>
+      <section className="card stack" style={{ gap: 12, padding: "14px 16px 16px" }} aria-label="Your thoughts on this">
+        <div className="between">
+          <h2 style={{ fontSize: 16, letterSpacing: "-0.01em" }}>Your thoughts on this</h2>
+          {pinned.length > 0 && <span className="small muted">{pinned.length} {pinned.length === 1 ? "thought" : "thoughts"}</span>}
+        </div>
+        {pinned.length > 0 && <span className="small muted" style={{ marginTop: -8 }}>Newest first. Tap one to open it.</span>}
+        {pinned.slice(0, allThoughts ? undefined : 3).map((t) => {
+          const d = new Date(t.created_at);
+          const note = t === oldest && it.done_at && day(it.done_at) === day(d) ? THE_DAY[it.kind] : "";
+          const th = t.thread_id ? data.threadTitle.get(t.thread_id) : null;
+          return (
+            <Link key={t.id} href={`/thought/?id=${t.id}`} className="stack" style={{ gap: 3, textDecoration: "none", borderTop: "1px dashed var(--ink)", paddingTop: 10 }}>
+              <span className="small muted">
+                <strong style={{ color: "var(--ink)" }}>{day(d)}</strong>
+                {th ? ` · In “${th}”` : ""}
+                {note ? ` · ${note}` : ""}
+                {t.source ? ` · from ${t.source === "letterboxd" ? "Letterboxd" : "Goodreads"}` : ""}
+              </span>
+              <span className="serif clamp2" style={{ fontSize: 16, lineHeight: 1.35 }}>{t.body}</span>
+            </Link>
+          );
+        })}
+        {pinned.length > 3 && (
+          <button className="link small" style={{ alignSelf: "flex-start", minHeight: 44 }} onClick={() => setAllThoughts(!allThoughts)}>
+            {allThoughts ? "Show fewer" : `See more (${pinned.length - 3})`}
+          </button>
         )}
-        {pinned.length === 0 && <span className="muted">Nothing written about it yet. What did it leave you with?</span>}
-        <Link className="btn block dashed" href={`/write/?interest=${it.id}`} style={{ fontWeight: 500 }}>
-          {pinned.length ? "Add another thought" : "Write a thought about it"}
+        {pinned.length === 0 && <span className="muted small">Nothing written about it yet. What did it leave you with?</span>}
+        <Link className="btn block ink" href={`/write/?interest=${it.id}`} style={{ minHeight: 46 }}>
+          {pinned.length ? "Write about this" : "Write a thought about it"}
         </Link>
-        <button className="link" style={{ fontWeight: 500 }} onClick={() => setSheet("pin")}>
+        <button className="link small" style={{ fontWeight: 500, minHeight: 44 }} onClick={() => setSheet("pin")}>
           Pin a thought you already wrote
         </button>
       </section>
@@ -257,7 +263,7 @@ function ItemView() {
         </button>
         <span className="muted" aria-hidden="true">·</span>
         <button className="link" style={{ fontWeight: 500 }} onClick={() => setSheet("remove")}>
-          Remove from interests
+          Remove from Saved
         </button>
       </div>
 

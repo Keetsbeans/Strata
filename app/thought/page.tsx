@@ -148,7 +148,7 @@ function ThoughtView() {
           </button>
         </div>
         {linkedIn.length > 0 && (
-          <span className="small muted">
+          <p className="small muted" style={{ margin: 0 }}>
             Also linked in {linkedIn.length} {linkedIn.length === 1 ? "thread" : "threads"}:{" "}
             {linkedIn.map((x, i) => (
               <span key={x.id}>
@@ -156,7 +156,7 @@ function ThoughtView() {
                 <Link href={`/thread/?id=${x.id}`} style={{ color: "var(--ink)" }}>{x.title}</Link>
               </span>
             ))}
-          </span>
+          </p>
         )}
         {thread && !isRoot && (
           <button className="link small" style={{ alignSelf: "flex-start", minHeight: 32 }} onClick={async () => (await store.updateThought(t.id, { thread_id: null }), reload())}>

@@ -164,7 +164,7 @@ export default function Home() {
           <div className="folders">
             <Folder href="/review/" label="To flip through" count={unsorted.length} icon="flip" colour="var(--butter)" sheet="var(--blue)" />
             <Folder href="/stack/" label="Unfinished" count={drafts.length} icon="unfinished" colour="var(--blue)" sheet="var(--lilac)" />
-            <Folder href="/interests/" label="Interests" count={interests.length} icon="interests" colour="var(--lilac)" sheet="var(--butter)" />
+            <Folder href="/interests/" label="Saved" count={interests.length} icon="interests" colour="var(--lilac)" sheet="var(--butter)" />
             <Folder href="/collections/" label="Collections" count={collections.length} icon="collections" colour="var(--butter)" sheet="var(--lilac)" />
             <Folder href="/threads/" label="Threads" count={threads.length} icon="threads" colour="var(--card)" sheet="var(--lilac)" />
             <Folder href="/inbox/" label="Inbox" count={back.yearAgo.length + back.waiting.length + links.length} icon="inbox" colour="var(--card)" sheet="var(--butter)" />
@@ -182,7 +182,7 @@ export default function Home() {
         {recentItems.length > 0 && (
           <section className="stack" style={{ gap: 10 }}>
             <div className="between">
-              <h2 style={{ fontSize: 17 }}>Recent interests</h2>
+              <h2 style={{ fontSize: 17 }}>Recently saved</h2>
               <Link href="/interests/" className="link" style={{ fontSize: 13 }}>
                 See all
               </Link>
