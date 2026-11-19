@@ -3,9 +3,30 @@ import Link from "next/link";
 import Mascot from "@/components/Mascot";
 import { cloudReady } from "@/lib/supabase";
 import { useStartTryOut } from "../providers";
+import { useEffect, useState } from "react";
+import Onboarding from "@/components/Onboarding";
+
+const SEEN = "strata:onboarded";
 
 export default function Welcome() {
   const tryOut = useStartTryOut();
+  const [intro, setIntro] = useState(false);
+  useEffect(() => {
+    try {
+      setIntro(!localStorage.getItem(SEEN));
+    } catch {}
+  }, []);
+  if (intro)
+    return (
+      <Onboarding
+        onDone={() => {
+          try {
+            localStorage.setItem(SEEN, "1");
+          } catch {}
+          setIntro(false);
+        }}
+      />
+    );
   return (
     <main className="screen no-nav" style={{ overflow: "hidden" }}>
       <div className="grow" style={{ minHeight: 120 }} />
