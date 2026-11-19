@@ -68,7 +68,7 @@ export function plainTextZip(data: Data): Uint8Array {
     if (!list.length) continue;
     const L = KIND_LABEL[kind];
     const lines = list.map((i) => {
-      const bits = [i.status === "done" ? L.done : L.want, i.creator, i.rating ? `${i.rating}/5` : "", i.moods.join(", "), i.favourite ? "favourite" : ""].filter(Boolean);
+      const bits = [i.status === "done" ? L.done : L.want, i.creator, i.rating ? `${i.rating}/5` : "", i.moods.join(", "), (i.genres ?? []).join(", "), i.favourite ? "favourite" : ""].filter(Boolean);
       const pinned = sorted.filter((t) => t.interest_id === i.id && !t.discarded_at).map((t) => `  - ${stamp(t.created_at)}: [${t.body.split("\n")[0].slice(0, 80)}](../${names.get(t.id)})`);
       const links = i.links.map((l) => `  - ${l.title || l.url}: ${l.url}`);
       return [`- **${itemTitle.get(i.id)}** · ${bits.join(" · ")}`, ...pinned, ...links].join("\n");

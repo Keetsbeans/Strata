@@ -36,10 +36,10 @@ export function sampleData() {
   ];
   const item = (id: string, kind: Interest["kind"], title: string, creator: string, year: number, when: string, extra: Partial<Interest> = {}): Interest => ({
     id, kind, title, creator, year, image_url: null, image_checked: false, source: "manual", source_id: null, status: "done", rating: null,
-    moods: [], favourite: false, links: [], created_at: when, updated_at: when, done_at: when, nudged_at: null, ...extra,
+    moods: [], genres: [], favourite: false, links: [], created_at: when, updated_at: when, done_at: when, nudged_at: null, ...extra,
   });
   const interests: Interest[] = [
-    item("i1", "film", "Perfect Days", "Wim Wenders", 2023, ago(9, 22, 0), { rating: 4, moods: ["Quiet"], favourite: true }),
+    item("i1", "film", "Perfect Days", "Wim Wenders", 2023, ago(9, 22, 0), { rating: 4, moods: ["Quiet"], genres: ["Drama"], favourite: true }),
     item("i2", "film", "Paterson", "Jim Jarmusch", 2016, ago(42, 20, 0), { status: "want", done_at: null, moods: ["Quiet"] }),
     item("i3", "film", "Columbus", "Kogonada", 2017, ago(30, 21, 0), { moods: ["Quiet"] }),
     item("i4", "book", "The Remains of the Day", "Kazuo Ishiguro", 1989, ago(8, 10, 0), { status: "want", done_at: null }),

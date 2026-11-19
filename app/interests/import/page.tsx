@@ -112,7 +112,7 @@ export default function Import() {
             key={k}
             aria-pressed={from === k}
             className="card stack grow"
-            style={{ gap: 2, flex: "1 1 0", minHeight: 64, textAlign: "left", borderWidth: from === k ? 2 : 1, background: from === k ? "#F3EDFD" : "var(--card)" }}
+            style={{ gap: 2, flex: "1 1 0", minHeight: 64, textAlign: "left", borderWidth: from === k ? 2 : 1, background: from === k ? "var(--blue)" : "var(--card)" }}
             onClick={() => (setFrom(k), setFound(null), setError(""))}
           >
             <strong style={{ fontSize: 15, fontWeight: 600 }}>{FROM[k].name}</strong>
@@ -150,7 +150,7 @@ export default function Import() {
       )}
       <div className="grow" />
       <span className="row small muted" style={{ alignItems: "flex-start", gap: 8 }}>
-        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#151515" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flex: "0 0 16px" }}>
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flex: "0 0 16px" }}>
           <rect x="5" y="11" width="14" height="10" rx="2" />
           <path d="M8 11V8a4 4 0 0 1 8 0v3" />
         </svg>

@@ -24,7 +24,11 @@ function load(): DB {
   try {
     const raw = localStorage.getItem(KEY);
     // try-outs started before stage 2 have no interests, collections or links yet
-    if (raw) return { interests: [], collections: [], collectionItems: [], links: [], ...JSON.parse(raw) };
+    if (raw) {
+      const db = { interests: [], collections: [], collectionItems: [], links: [], ...JSON.parse(raw) };
+      db.interests = db.interests.map((i: Interest) => ({ ...i, genres: i.genres ?? [] }));
+      return db;
+    }
   } catch {}
   const db = sampleData();
   save(db);
@@ -53,6 +57,7 @@ export function newInterest(i: NewInterest, id: string, at: string): Interest {
     status: "want",
     rating: null,
     moods: [],
+    genres: [],
     favourite: false,
     links: [],
     done_at: null,

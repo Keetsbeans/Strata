@@ -6,6 +6,7 @@ import { useApp } from "../providers";
 import Icon from "@/components/Icon";
 import Dialog from "@/components/Dialog";
 import { plainTextZip } from "@/lib/exportText";
+import { THEMES, getTheme, setTheme, type ThemeId } from "@/lib/theme";
 import { getVoiceMode, liveSupported, setVoiceMode } from "@/lib/voice";
 import { addFingerprint, fingerprintEnabled, fingerprintSupported, lockEnabled, removeFingerprint, setPin, turnOffLock } from "@/lib/lock";
 
@@ -42,8 +43,10 @@ export default function Settings() {
   const [pin, setPinText] = useState("");
   const [msg, setMsg] = useState("");
   const [leaving, setLeaving] = useState(false);
+  const [theme, setThemeState] = useState<ThemeId>("lilac");
 
   useEffect(() => {
+    setThemeState(getTheme());
     setLock(lockEnabled());
     setFinger(fingerprintEnabled());
     setLive(getVoiceMode() === "live");
@@ -127,6 +130,24 @@ export default function Settings() {
         )}
       </section>
 
+      <section className="stack" style={{ gap: 10 }} role="radiogroup" aria-label="Colour theme">
+        <h2 style={{ fontSize: 15 }}>Colour theme</h2>
+        {THEMES.map((t) => (
+          <button key={t.id} type="button" role="radio" aria-checked={theme === t.id} className="theme-row" onClick={() => (setTheme(t.id), setThemeState(t.id))}>
+            <span className="swatch" aria-hidden="true">
+              {t.colours.map((c) => (
+                <span key={c} style={{ background: c }} />
+              ))}
+            </span>
+            <span className="grow stack" style={{ gap: 0 }}>
+              <strong style={{ fontWeight: 600, fontSize: 15 }}>{t.name}</strong>
+              <span className="small muted">{t.id === "lilac" ? "The original" : "Extra theme · free while Strata is new"}</span>
+            </span>
+            {theme === t.id && <span className="tag lilac">In use</span>}
+          </button>
+        ))}
+      </section>
+
       <section className="stack" style={{ gap: 10 }}>
         <h2 style={{ fontSize: 15 }}>Privacy</h2>
         <Row title="App lock" sub="Ask for a PIN when Strata opens, and after a minute away">
@@ -187,7 +208,7 @@ export default function Settings() {
 
       <section className="stack" style={{ gap: 10 }}>
         <h2 style={{ fontSize: 15 }}>Your data</h2>
-        <Row title="Export everything" sub="Every thought, thread and earlier version, as plain text files anyone can open">
+        <Row title="Export everything" sub="Every thought, thread, interest and collection, as plain text files anyone can open">
           <button className="btn sm" onClick={exportAll}>Export</button>
         </Row>
         <Link href="/discarded/" className="setting" style={{ textDecoration: "none" }}>
@@ -196,7 +217,7 @@ export default function Settings() {
         </Link>
       </section>
 
-      <p className="small muted" style={{ textAlign: "center" }}>Strata · stage 1 · Colour themes, interests and capsules arrive in later stages.</p>
+      <p className="small muted" style={{ textAlign: "center" }}>Strata · stage 2 · Time capsules arrive in the next stage.</p>
 
       {leaving && (
         <Dialog

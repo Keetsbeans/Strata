@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "./providers";
 import RegisterSW from "@/components/RegisterSW";
+import { THEME_SCRIPT } from "@/lib/theme";
 
 const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -17,8 +18,9 @@ export const viewport: Viewport = { themeColor: "#EFEDE8", width: "device-width"
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
