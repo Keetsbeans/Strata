@@ -89,7 +89,7 @@ export function InterestPicker({ store, onPick, onClose }: { store: Store; onPic
             </span>
           </button>
         ))}
-        {list?.length === 0 && <span className="muted">Nothing in Interests yet. Add a film, book or song there first.</span>}
+        {list?.length === 0 && <span className="muted">Nothing saved yet. Add a film, book or song first.</span>}
       </div>
     </Sheet>
   );

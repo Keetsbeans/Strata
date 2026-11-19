@@ -80,17 +80,33 @@ const go = async (path) => {
 };
 
 try {
-  console.log("Interests");
-  await go("/interests/");
+  console.log("Collections and Everything you saved");
+  await go("/collections/");
+  ok(await seen(page.getByRole("link", { name: /Everything you saved/ })), "Collections opens with Everything you saved");
+  ok((await page.locator(".board-card").count()) >= 3, "collections show as boards, plus New collection");
+  ok(await seen(page.getByRole("link", { name: "Collections", exact: true })), "the bottom bar says Collections");
+  await page.getByRole("link", { name: /Everything you saved/ }).click();
+  await page.waitForURL(/\/interests\//);
   await page.getByText("Perfect Days").first().waitFor();
-  ok(await seen(page.getByText("Watched · 2 thoughts")), "sample film shows its two pinned thoughts");
-  await page.waitForFunction(() => document.querySelectorAll(".shelf img").length >= 3, null, { timeout: 8000 });
+  ok(await seen(page.getByText("Film · Quiet · 2 thoughts")), "sample film shows its mood and two pinned thoughts");
+  await page.waitForFunction(() => document.querySelectorAll(".saved-grid img").length >= 3, null, { timeout: 8000 });
   ok(true, "posters were looked up and shown");
-  await shot("01-interests");
-
+  await shot("01-saved");
+  await page.getByRole("button", { name: "Mood filter" }).click();
   await page.getByRole("button", { name: "Quiet" }).click();
-  ok((await page.locator(".shelf-item").count()) === 3, "mood filter shows the three quiet films");
-  await page.getByRole("button", { name: "Quiet" }).click();
+  ok((await page.locator(".saved-tile").count()) === 3, "mood filter shows the three quiet films");
+  await page.getByRole("button", { name: /Mood filter/ }).click();
+  await page.getByRole("button", { name: "Any" }).click();
+  await page.getByRole("button", { name: /Not in a collection/ }).click();
+  ok(!(await page.getByText("Perfect Days").count()), "Not in a collection leaves out what's already in one");
+  await page.getByRole("button", { name: /^All · / }).click();
+  await page.getByRole("button", { name: "Select" }).click();
+  await page.getByRole("button", { name: "Columbus" }).click();
+  await page.getByRole("button", { name: "Paterson" }).click();
+  ok(await seen(page.getByText("2 selected")), "picked two things");
+  await shot("01b-saved-select");
+  await page.getByRole("region", { name: "Do with the picked things" }).getByRole("button", { name: "Cosy" }).click();
+  ok(await seen(page.getByText("Gave 2 things the mood Cosy.")), "gave two things a mood at once");
 
   console.log("Add a film from the catalogue");
   await page.getByRole("link", { name: "Add" }).click();
@@ -129,16 +145,24 @@ try {
   await page.getByRole("button", { name: "Films that stayed with me" }).click();
   await page.locator(".card", { hasText: "Films that stayed with me" }).first().waitFor();
   ok(true, "film added to a collection");
+  ok(await seen(page.getByText("In: Films that stayed with me")), "the film says which collections it's in");
+  ok(await seen(page.getByRole("region", { name: "Your thoughts on this" }).getByText("The last scene keeps playing")), "Your thoughts on this box");
   await shot("03-film-page");
 
-  console.log("Collections and Pick up again");
+  console.log("A collection, as tiles");
   await page.locator("a.card[href*=\"/collection/\"]", { hasText: "Films that stayed with me" }).click();
   await page.waitForURL(/\/collection\//);
-  await page.getByRole("heading", { name: /Pick up again|From further back/ }).waitFor();
-  ok(true, "Pick up again row on the collection");
-  ok((await page.locator(".pickup-card").count()) >= 3, "row holds the collection's thoughts");
-  ok(await seen(page.getByText("Aftersun").first()), "Aftersun on the shelf");
+  ok(await seen(page.getByText("Aftersun").first()), "Aftersun in the collection");
+  ok(!(await page.getByRole("button", { name: /^Type filter/ }).count()), "no Type filter when it's all films");
+  await page.getByRole("button", { name: "Mood filter" }).click();
+  await page.getByRole("button", { name: "Heavy" }).click();
+  ok(await seen(page.getByText(/^1 of \d+$/)), "mood filter inside a collection");
   await shot("04-collection");
+  await page.getByRole("button", { name: "Edit name, note and cover" }).click();
+  await page.getByRole("radio", { name: "Use Aftersun as the cover" }).click();
+  await page.getByRole("button", { name: "Save" }).click();
+  await go("/collections/");
+  ok(await seen(page.locator(".board-card", { hasText: "Films that stayed with me" }).locator(".board-cover.n1")), "a chosen cover replaces the collage");
 
   console.log("Pin an existing thought from its own page");
   await go("/thoughts/");
@@ -249,7 +273,7 @@ try {
   await go("/interests/?kind=film");
   await page.getByText("Past Lives").click();
   await page.getByText("Two people, one \"what if\", and a bar in New York.").waitFor();
-  ok(await seen(page.getByText(/2 May 2024 · .* · from Letterboxd/)), "review kept its date and source");
+  ok(await seen(page.getByText(/2 May 2024.*from Letterboxd/)), "review kept its date and source");
   ok((await page.getByRole("radio", { name: "5 out of 5" }).getAttribute("aria-checked")) === "true", "4.5 stars became 5 dots");
 
   console.log("Goodreads import");
@@ -264,7 +288,7 @@ try {
 
   console.log("Home and export");
   await go("/");
-  ok(await seen(page.getByText("Recent interests")), "Home shows recent interests");
+  ok(await seen(page.getByText("Recently saved")), "Home shows recently saved things");
   ok(await seen(page.getByRole("link", { name: /^Collections, \d+$/ })), "Home has a Collections folder");
   await shot("09-home");
 
@@ -290,13 +314,14 @@ try {
   await shot("11-home-navy");
   await page.evaluate(() => localStorage.setItem("strata:theme", "lilac"));
   await go("/interests/?kind=film");
+  await page.getByRole("button", { name: "Genre filter" }).click();
   await page.getByRole("button", { name: "Coming of age" }).click();
-  ok((await page.locator(".shelf-item").count()) === 1, "genre filter on the shelf");
+  ok((await page.locator(".saved-tile").count()) === 1, "genre filter in Everything you saved");
 
   console.log("Remove an item: its thoughts stay");
   await go("/interests/?kind=film");
   await page.getByText("Aftersun").click();
-  await page.getByRole("button", { name: "Remove from interests" }).click();
+  await page.getByRole("button", { name: "Remove from Saved" }).click();
   await page.getByRole("button", { name: "Remove it" }).click();
   await page.waitForURL(/\/interests\//);
   await go("/thoughts/");
@@ -412,7 +437,7 @@ try {
       return out;
     });
   const found = { unnamed: new Set(), small: new Set() };
-  for (const path of ["/", "/thoughts/", "/review/", "/stack/", "/calendar/", "/interests/", "/interests/?kind=book", "/collections/", "/inbox/", "/search/", "/profile/", "/settings/", "/new/", "/threads/", "/discarded/"]) {
+  for (const path of ["/", "/thoughts/", "/review/", "/stack/", "/calendar/", "/interests/", "/interests/?kind=book", "/collections/", "/collection/?id=c1", "/inbox/", "/search/", "/profile/", "/settings/", "/new/", "/threads/", "/discarded/"]) {
     await go(path);
     await page.waitForTimeout(150);
     const a = await audit();
@@ -420,7 +445,7 @@ try {
     a.small.forEach((x) => found.small.add(path + " " + x));
   }
   await go("/interests/");
-  await page.locator(".shelf-item").first().click();
+  await page.locator(".saved-tile").first().click();
   await page.waitForURL(/\/interest\//);
   const ia = await audit();
   ia.unnamed.forEach((x) => found.unnamed.add("/interest/ " + x));
