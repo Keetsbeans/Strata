@@ -514,3 +514,24 @@ button.mood { min-height: 44px; padding: 0 12px; font-size: 12px; }
 .import-stack i { position: absolute; width: 34px; height: 48px; border: 1px solid var(--ink); border-radius: 6px; background: var(--card); }
 .import-stack i:first-child { left: 0; top: 6px; transform: rotate(-8deg); background: var(--lilac); }
 .import-stack i:last-child { left: 12px; top: 2px; transform: rotate(4deg); }
+
+/* board view */
+.board-wrap { margin: 0 -24px; }
+.board { position: relative; height: min(64dvh, 560px); overflow: hidden; touch-action: none; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); background-color: var(--paper, transparent); background-image: radial-gradient(color-mix(in srgb, var(--ink) 22%, transparent) 1px, transparent 1.2px); background-size: 16px 16px; user-select: none; -webkit-user-select: none; }
+.board-world { position: absolute; left: 0; top: 0; width: 1px; height: 1px; transform-origin: 0 0; }
+.board-item { position: absolute; width: 170px; padding: 10px 10px 8px; background: var(--card); border: 1px solid var(--ink); border-radius: 6px; box-shadow: 3px 3px 0 color-mix(in srgb, var(--ink) 80%, transparent); transition: transform 0.15s; cursor: grab; }
+.board-item .poster { width: 100%; aspect-ratio: 2 / 3; border-radius: 3px; pointer-events: none; }
+.board-item.moving { outline: 2px dashed var(--ink); outline-offset: 6px; box-shadow: 8px 10px 0 color-mix(in srgb, var(--ink) 35%, transparent); cursor: grabbing; }
+.board-cap { display: block; text-align: center; font-size: 14px; font-weight: 600; margin-top: 8px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-link { display: flex; align-items: flex-end; min-height: 120px; padding: 10px; background: var(--blue); border: 1px solid var(--ink); border-radius: 3px; font-size: 15px; line-height: 1.2; }
+.board-tape { position: absolute; left: 50%; top: -10px; width: 64px; height: 20px; margin-left: -32px; background: var(--butter); opacity: 0.85; border: 1px solid color-mix(in srgb, var(--ink) 50%, transparent); transform: rotate(-4deg); }
+.board-moving { position: absolute; left: 50%; top: -40px; transform: translateX(-50%); background: var(--ink); color: var(--card); font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 6px; white-space: nowrap; }
+.board-decor { position: absolute; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; cursor: grab; }
+.board-decor.label span { font-style: italic; font-weight: 700; font-size: 18px; padding: 6px 14px; background: var(--card); border: 1px solid var(--ink); border-radius: 4px; white-space: nowrap; box-shadow: 2px 2px 0 var(--ink); }
+.board-decor.picked { outline: 2px dashed var(--ink); outline-offset: 4px; border-radius: 6px; }
+.board-decor.moving { filter: drop-shadow(4px 6px 0 color-mix(in srgb, var(--ink) 35%, transparent)); }
+.board-remove { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); background: var(--card); }
+.sticker-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.sticker-grid button { min-height: 56px; border: 1px solid var(--ink); border-radius: 12px; background: var(--card); display: flex; align-items: center; justify-content: center; }
+.label-chip { min-height: 44px; padding: 0; border: 0; background: none; }
+.label-chip > span { display: inline-block; font-style: italic; font-weight: 700; font-size: 13px; padding: 6px 12px; border: 1px solid var(--ink); border-radius: 4px; background: var(--card); }

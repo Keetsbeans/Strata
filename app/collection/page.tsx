@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useApp } from "../providers";
 import { useData } from "@/lib/useData";
@@ -13,6 +13,8 @@ import Poster from "@/components/Poster";
 import Dialog from "@/components/Dialog";
 import Nav from "@/components/Nav";
 import { CollectionForm, contents } from "@/components/CollectionBits";
+import Board, { STICKERS, gridSpot } from "@/components/Board";
+import type { Decor } from "@/lib/types";
 import { FilterBar, NO_FILTERS, SavedRow, SavedTile, matches, type Filters } from "@/components/Saved";
 
 function CollectionView() {
@@ -28,6 +30,23 @@ function CollectionView() {
   const [f, setF] = useState<Filters>(NO_FILTERS);
   const [q, setQ] = useState("");
   const [moods] = useState(() => (typeof window === "undefined" ? [] : getMoods()));
+  const [view, setView] = useState<"tiles" | "board">("tiles");
+  const [decor, setDecor] = useState<Decor[]>([]);
+  const [drawer, setDrawer] = useState<null | "stickers" | "labels">(null);
+  const [label, setLabel] = useState("");
+  const center = useRef<() => { x: number; y: number }>(() => ({ x: 200, y: 200 }));
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("strata:view:" + id) === "board") setView("board");
+    } catch {}
+  }, [id]);
+  useEffect(() => setDecor(data?.c?.decor ?? []), [data?.c]);
+  const pickView = (v: "tiles" | "board") => {
+    setView(v);
+    try {
+      localStorage.setItem("strata:view:" + id, v);
+    } catch {}
+  };
   const things = data?.c ? data.c.items.map((x) => ({ x, it: data.interests.get(x.interest_id ?? "") })).filter((e) => !!e.it) : [];
   usePictureFill(store, things.map((e) => e.it!), (it) => setData((d) => d && { ...d, interests: new Map(d.interests).set(it.id, it) }));
 
@@ -43,6 +62,15 @@ function CollectionView() {
       </main>
     );
 
+  const used = [...new Set(decor.filter((d) => d.kind === "label").map((d) => d.name))].slice(0, 8);
+  const addDecor = async (kind: Decor["kind"], name: string) => {
+    const m = center.current();
+    const d: Decor = { id: Math.random().toString(36).slice(2, 10), kind, name, x: m.x - (kind === "label" ? 60 : 28) + Math.round(Math.random() * 60 - 30), y: m.y - 28 + Math.round(Math.random() * 60 - 30), r: Math.round(Math.random() * 10 - 5) };
+    const next = [...decor, d];
+    setDecor(next);
+    setDrawer(null);
+    await store.updateCollection(c.id, { decor: next });
+  };
   const itemIds = new Set(c.items.map((x) => x.interest_id).filter(Boolean));
   const shown = things.filter((e) => matches(e.it!, f));
   const term = normTitle(q);
@@ -69,8 +97,33 @@ function CollectionView() {
             </button>
           </div>
         </div>
-        {things.length > 1 && <FilterBar items={things.map((e) => e.it!)} value={f} onChange={setF} moods={moods} />}
         {things.length > 0 && (
+          <div className="seg wide" role="group" aria-label="How to show it">
+            <button aria-pressed={view === "tiles"} onClick={() => pickView("tiles")}>Tiles</button>
+            <button aria-pressed={view === "board"} onClick={() => pickView("board")}>Board</button>
+          </div>
+        )}
+        {view === "board" && things.length > 0 && (
+          <>
+            <Board store={store} collectionId={c.id} things={things.map((e) => ({ x: e.x, it: e.it! }))} decor={decor} onDecor={setDecor} center={center} />
+            <span className="small muted" style={{ textAlign: "center", marginTop: -8 }}>Drag to look around · pinch to zoom · long-press to move</span>
+            <div className="row" style={{ justifyContent: "center", gap: 6, marginTop: -10 }}>
+              <button className="pill" onClick={() => setDrawer("stickers")}><span>Stickers</span></button>
+              <button className="pill" onClick={() => setDrawer("labels")}><span>Label</span></button>
+              <button
+                className="pill"
+                onClick={async () => {
+                  await Promise.all(things.map((e, i) => store.placeItem(e.x.id, gridSpot(i))));
+                  reload();
+                }}
+              >
+                <span>Tidy up</span>
+              </button>
+            </div>
+          </>
+        )}
+        {view === "tiles" && things.length > 1 && <FilterBar items={things.map((e) => e.it!)} value={f} onChange={setF} moods={moods} />}
+        {view === "tiles" && things.length > 0 && (
           <div className="between" style={{ marginTop: -6 }}>
             <span className="small muted">{filtered ? `${shown.length} of ${things.length}` : `${things.length} ${things.length === 1 ? "thing" : "things"}`}</span>
             <button className="link small" style={{ minHeight: 44 }} onClick={() => setRemoving(!removing)}>
@@ -78,7 +131,7 @@ function CollectionView() {
             </button>
           </div>
         )}
-        {shown.some((e) => e.it!.kind !== "article") && (
+        {view === "tiles" && shown.some((e) => e.it!.kind !== "article") && (
           <div className="saved-grid two">
             {shown
               .filter((e) => e.it!.kind !== "article")
@@ -98,7 +151,7 @@ function CollectionView() {
               )}
           </div>
         )}
-        {shown.some((e) => e.it!.kind === "article") && (
+        {view === "tiles" && shown.some((e) => e.it!.kind === "article") && (
           <div className="stack" style={{ gap: 8 }}>
             {shown
               .filter((e) => e.it!.kind === "article")
@@ -115,7 +168,7 @@ function CollectionView() {
               )}
           </div>
         )}
-        {things.length > 0 && shown.length === 0 && (
+        {view === "tiles" && things.length > 0 && shown.length === 0 && (
           <div className="empty">
             <h2>Nothing matches</h2>
             <button className="btn sm" onClick={() => setF(NO_FILTERS)}>Show all</button>
@@ -131,6 +184,44 @@ function CollectionView() {
       </main>
       <Nav />
 
+      {drawer && (
+        <>
+          <div className="scrim" onClick={() => setDrawer(null)} />
+          <div className="dialog" role="dialog" aria-modal="true" aria-label="Stickers and labels">
+            <div className="seg wide" role="group" aria-label="Stickers or labels">
+              <button aria-pressed={drawer === "stickers"} onClick={() => setDrawer("stickers")}>Stickers</button>
+              <button aria-pressed={drawer === "labels"} onClick={() => setDrawer("labels")}>Labels</button>
+            </div>
+            {drawer === "stickers" ? (
+              <>
+                <div className="sticker-grid">
+                  {Object.entries(STICKERS).map(([name, st]) => (
+                    <button key={name} aria-label={`Add ${st.label.toLowerCase()}`} onClick={() => addDecor("sticker", name)}>
+                      <svg viewBox="0 0 40 40" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{st.svg}</svg>
+                    </button>
+                  ))}
+                </div>
+                <p className="small">Tap a sticker to drop it in the middle of what you can see, then long-press and drag it where you like.</p>
+              </>
+            ) : (
+              <>
+                <form className="row" onSubmit={(e) => (e.preventDefault(), label.trim() && (addDecor("label", label.trim().slice(0, 40)), setLabel("")))}>
+                  <input className="input" placeholder="Write a few words" aria-label="Label text" value={label} onChange={(e) => setLabel(e.target.value)} />
+                  <button className="btn sm ink" disabled={!label.trim()}>Add</button>
+                </form>
+                {used.length > 0 && (
+                  <div className="row" style={{ flexWrap: "wrap", gap: 6 }}>
+                    {used.map((n) => (
+                      <button key={n} className="label-chip" onClick={() => addDecor("label", n)}><span>{n}</span></button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+            <button className="link" style={{ fontWeight: 500 }} onClick={() => setDrawer(null)}>Close</button>
+          </div>
+        </>
+      )}
       {mode === "edit" && (
         <CollectionForm
           initial={c}
