@@ -17,9 +17,9 @@ export function preview(body: string, n = 140) {
   return one.length > n ? one.slice(0, n - 1).trimEnd() + "…" : one || "Empty thought";
 }
 
-type Props = { t: Thought; selecting?: boolean; picked?: boolean; onPick?: () => void; href?: string };
+type Props = { t: Thought; selecting?: boolean; picked?: boolean; onPick?: () => void; href?: string; onPin?: () => void; threadName?: string };
 
-export default function ThoughtCard({ t, selecting, picked, onPick, href }: Props) {
+export default function ThoughtCard({ t, selecting, picked, onPick, href, onPin, threadName }: Props) {
   const inner = (
     <>
       {selecting && (
@@ -32,6 +32,7 @@ export default function ThoughtCard({ t, selecting, picked, onPick, href }: Prop
         {t.topics[0] && <span className={"tag " + topicColour(t.topics[0])}>{t.topics[0]}</span>}
       </span>
       <p>{preview(t.body)}</p>
+      {threadName && <span className="small muted">In “{threadName}”</span>}
     </>
   );
   const cls = "card thought-card" + (selecting ? " selecting" : "") + (picked ? " picked" : "");
@@ -41,9 +42,18 @@ export default function ThoughtCard({ t, selecting, picked, onPick, href }: Prop
         {inner}
       </button>
     );
-  return (
+  const link = (
     <Link className={cls} href={href ?? (t.finished ? `/thought/?id=${t.id}` : `/write/?id=${t.id}`)}>
       {inner}
     </Link>
+  );
+  if (!onPin || !t.finished) return link;
+  return (
+    <div className="thought-wrap">
+      {link}
+      <button className={"pin-btn" + (t.thread_id ? " on" : "")} aria-label={t.thread_id ? `In ${threadName ?? "a thread"}. Put it in another thread` : "Put it in a thread"} onClick={onPin}>
+        <i><Icon name="pin" size={15} width={2} /></i>
+      </button>
+    </div>
   );
 }

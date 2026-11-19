@@ -1,20 +1,20 @@
 "use client";
 import Link from "next/link";
 
-/** the four chips at the top of Thoughts. All, Unsorted and Unfinished filter thoughts; Threads lists threads. */
+/** the tabs at the top of Thoughts: All, Unsorted and Unfinished filter thoughts; Threads lists threads. Underlined, so they never look like buttons. */
 export default function ThoughtTabs({ on, unsorted, unfinished }: { on: "all" | "unsorted" | "unfinished" | "threads"; unsorted?: number; unfinished?: number }) {
-  const chip = (key: typeof on, label: string, href: string, n?: number) => (
-    <Link href={href} className="chip" aria-pressed={on === key} style={{ display: "flex", flexDirection: "column", justifyContent: "center", textDecoration: "none" }} replace>
+  const tab = (key: typeof on, label: string, href: string, n?: number) => (
+    <Link href={href} className="tab" role="tab" aria-selected={on === key} aria-current={on === key ? "page" : undefined} replace>
       {label}
-      {n !== undefined && <span className="n">{n}</span>}
+      {!!n && <span className="tab-n">{n}</span>}
     </Link>
   );
   return (
-    <div className="chips" role="tablist">
-      {chip("all", "All", "/thoughts/")}
-      {chip("unsorted", "Unsorted", "/thoughts/?filter=unsorted", unsorted)}
-      {chip("unfinished", "Unfinished", "/thoughts/?filter=unfinished", unfinished)}
-      {chip("threads", "Threads", "/threads/")}
-    </div>
+    <nav className="tabs" role="tablist" aria-label="Show">
+      {tab("all", "All", "/thoughts/")}
+      {tab("unsorted", "Unsorted", "/thoughts/?filter=unsorted", unsorted)}
+      {tab("unfinished", "Unfinished", "/thoughts/?filter=unfinished", unfinished)}
+      {tab("threads", "Threads", "/threads/")}
+    </nav>
   );
 }

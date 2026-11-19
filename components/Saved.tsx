@@ -17,7 +17,7 @@ export const matches = (i: Interest, f: Filters) => (!f.kind || i.kind === f.kin
 export const kindWord = (k: InterestKind) => (k === "music" ? "Music" : k === "article" ? "Link" : KIND_LABEL[k].one);
 
 /** a row of slim drop-down pills: Type, Mood, Genre and Want to / Done. Type only shows when the things are of more than one kind. */
-export function FilterBar({ items, value, onChange, moods, onEditMoods }: { items: Interest[]; value: Filters; onChange: (f: Filters) => void; moods: string[]; onEditMoods?: () => void }) {
+export function FilterBar({ items, value, onChange, moods, onEditMoods, skip = [] }: { items: Interest[]; value: Filters; onChange: (f: Filters) => void; moods: string[]; onEditMoods?: () => void; skip?: (keyof Filters)[] }) {
   const [open, setOpen] = useState<null | keyof Filters>(null);
   const kinds = (["film", "book", "music", "article"] as InterestKind[]).filter((k) => items.some((i) => i.kind === k));
   const genres = [...new Set(items.filter((i) => !value.kind || i.kind === value.kind).flatMap((i) => i.genres ?? []))].sort();
@@ -28,7 +28,7 @@ export function FilterBar({ items, value, onChange, moods, onEditMoods }: { item
     genre: { label: "Genre", list: genres.map((g) => ({ v: g, label: g })) },
     status: { label: "Want to / Done", list: [{ v: "want", label: "Want to" }, { v: "done", label: "Done" }] },
   };
-  const keys = (Object.keys(options) as (keyof Filters)[]).filter((k) => (k === "kind" ? kinds.length > 1 : k === "genre" ? genres.length > 0 : true));
+  const keys = (Object.keys(options) as (keyof Filters)[]).filter((k) => !skip.includes(k)).filter((k) => (k === "kind" ? kinds.length > 1 : k === "genre" ? genres.length > 0 : true));
   const shown = (k: keyof Filters) => {
     const v = value[k];
     if (!v) return options[k].label;

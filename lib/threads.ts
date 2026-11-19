@@ -22,3 +22,10 @@ export function timeline(thread: Thread, thoughts: Thought[], links: ThreadLink[
   ].sort((a, b) => byDate(a.thought, b.thought));
   return root ? [{ thought: root, root: true }, ...rest] : rest;
 }
+
+/** put a thought in a thread: a loose thought becomes a follow-up there; one already in a thread is linked instead */
+export async function putInThread(store: import("@/lib/store/types").Store, t: Thought, threadId: string) {
+  if (t.thread_id === threadId) return;
+  if (!t.thread_id) await store.updateThought(t.id, { thread_id: threadId });
+  else await store.linkToThreads(t.id, [threadId]);
+}

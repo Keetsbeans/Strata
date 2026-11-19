@@ -18,6 +18,10 @@ const P: Record<string, string> = {
   calendar: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4",
   user: "M5 20c.8-3.5 3.6-5.5 7-5.5s6.2 2 7 5.5",
   chevron: "M10 6l6 6-6 6",
+  pin: "M9 4h6M10 4v5l-3 4h10l-3-4V4M12 13v7",
+  inbox: "M4 13l2.5-7h11L20 13v6H4zM4 13h5l1 2h4l1-2h5",
+  list: "M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01",
+  cards: "M8 4h11v14H8zM5 7v13h11",
   link: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1",
 };
 

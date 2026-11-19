@@ -194,7 +194,16 @@ function Inbox() {
                     <span className="small muted">Everything in an import is already saved and searchable. This line goes away when you tap Done on its page.</span>
                   </>
                 )}
-                <h2 style={{ fontSize: 17, marginTop: data.imports.length ? 8 : 0 }}>Shared to Strata</h2>
+                {data.imports.length === 0 && (
+                  <Link href="/interests/import/" className="card row import-cta" style={{ textDecoration: "none", gap: 14, alignItems: "center", padding: "14px 16px" }}>
+                    <span className="import-stack" aria-hidden="true"><i /><i /></span>
+                    <span className="stack grow" style={{ gap: 2 }}>
+                      <strong style={{ fontWeight: 600, fontSize: 15 }}>Import from Letterboxd or Goodreads</strong>
+                      <span className="small muted">Bring your films and books in. They wait here as one line to sort.</span>
+                    </span>
+                  </Link>
+                )}
+                <h2 style={{ fontSize: 17, marginTop: 8 }}>Shared to Strata</h2>
                 {pasteBox}
                 {data.links.map((l) => {
                   const pic = linkPicture(l.url);

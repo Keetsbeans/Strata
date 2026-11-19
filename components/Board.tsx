@@ -170,6 +170,7 @@ export default function Board({ store, collectionId, things, decor, onDecor, cen
         onWheel={wheel}
         aria-label="Board. Drag to look around, pinch to zoom, long-press a thing to move it."
         role="region"
+        style={{ backgroundPosition: `${cam.x}px ${cam.y}px`, backgroundSize: `${22 * cam.s}px ${22 * cam.s}px` }}
       >
         <div className="board-world" style={{ transform: `translate(${cam.x}px, ${cam.y}px) scale(${cam.s})` }}>
           {things.map(({ x, it }, i) => {

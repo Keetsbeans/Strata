@@ -25,7 +25,12 @@ export default function Collections() {
       <main className="screen" style={{ gap: 18 }}>
         <header className="between">
           <h1 className="h-big">Collections</h1>
-          <button className="btn sm" onClick={() => setMaking(true)}>New</button>
+          <span className="row" style={{ gap: 8 }}>
+            <Link className="icon-btn round" href="/search/" aria-label="Search">
+              <Icon name="search" size={20} />
+            </Link>
+            <button className="btn sm" onClick={() => setMaking(true)}>New</button>
+          </span>
         </header>
         <p className="muted" style={{ margin: "-6px 0 0", fontSize: 14 }}>Films, books, music and links you like, kept together. Your thoughts stay in Thoughts.</p>
         {error && <p className="error">{error}</p>}
@@ -39,6 +44,11 @@ export default function Collections() {
               </span>
             </span>
             <span aria-hidden="true" style={{ display: "inline-flex", transform: "rotate(180deg)" }}><Icon name="back" size={18} /></span>
+          </Link>
+        )}
+        {data && (
+          <Link href="/interests/import/" className="row small" style={{ gap: 8, alignItems: "center", minHeight: 44, marginTop: -8, fontWeight: 600 }}>
+            <Icon name="download" size={16} /> Import from Letterboxd or Goodreads
           </Link>
         )}
         {data && data.cols.length > 0 && (

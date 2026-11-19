@@ -240,7 +240,8 @@ body:has(.lock) { background: var(--ink); }
 .speak { min-height: 56px; font-size: 17px; }
 .listening-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #d64545; margin-right: 4px; animation: pulse 1s infinite; }
 @keyframes pulse { 50% { opacity: 0.3; } }
-.pickup { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -24px; padding: 2px 24px 6px; }
+.pickup { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 24px; scrollbar-width: none; margin: 0 -24px; padding: 2px 24px 6px; }
+.pickup::after { content: ""; flex: 0 0 14px; }
 .pickup::-webkit-scrollbar { display: none; }
 .pickup-card { flex: 0 0 74%; scroll-snap-align: start; display: flex; flex-direction: column; gap: 6px; text-decoration: none; min-height: 116px; text-align: left; }
 .pickup-more { flex-basis: 40%; align-items: center; justify-content: center; text-align: center; border-style: dashed; background: transparent; box-shadow: none; }
@@ -517,7 +518,7 @@ button.mood { min-height: 44px; padding: 0 12px; font-size: 12px; }
 
 /* board view */
 .board-wrap { margin: 0 -24px; }
-.board { position: relative; height: min(64dvh, 560px); overflow: hidden; touch-action: none; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); background-color: var(--paper, transparent); background-image: radial-gradient(color-mix(in srgb, var(--ink) 22%, transparent) 1px, transparent 1.2px); background-size: 16px 16px; user-select: none; -webkit-user-select: none; }
+.board { position: relative; height: min(64dvh, 560px); overflow: hidden; touch-action: none; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); background-color: var(--paper, transparent); background-image: radial-gradient(circle, color-mix(in srgb, var(--ink) 30%, transparent) 9%, transparent 11%); background-size: 22px 22px; user-select: none; -webkit-user-select: none; }
 .board-world { position: absolute; left: 0; top: 0; width: 1px; height: 1px; transform-origin: 0 0; }
 .board-item { position: absolute; width: 170px; padding: 10px 10px 8px; background: var(--card); border: 1px solid var(--ink); border-radius: 6px; box-shadow: 3px 3px 0 color-mix(in srgb, var(--ink) 80%, transparent); transition: transform 0.15s; cursor: grab; }
 .board-item .poster { width: 100%; aspect-ratio: 2 / 3; border-radius: 3px; pointer-events: none; }
@@ -535,3 +536,25 @@ button.mood { min-height: 44px; padding: 0 12px; font-size: 12px; }
 .sticker-grid button { min-height: 56px; border: 1px solid var(--ink); border-radius: 12px; background: var(--card); display: flex; align-items: center; justify-content: center; }
 .label-chip { min-height: 44px; padding: 0; border: 0; background: none; }
 .label-chip > span { display: inline-block; font-style: italic; font-weight: 700; font-size: 13px; padding: 6px 12px; border: 1px solid var(--ink); border-radius: 4px; background: var(--card); }
+.search-dark { background: transparent; color: var(--card); border-color: color-mix(in srgb, var(--card) 45%, transparent); }
+.icon-btn.plain { border: 0; background: transparent; }
+
+/* underlined tabs (Thoughts) */
+.tabs { display: flex; gap: 10px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 25%, transparent); overflow-x: auto; scrollbar-width: none; }
+.tab { min-height: 44px; min-width: 44px; justify-content: center; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-size: 14px; font-weight: 500; color: var(--muted); white-space: nowrap; margin-bottom: -1px; border-bottom: 2.5px solid transparent; }
+.tab[aria-selected="true"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--ink); }
+.tab-n { font-size: 11px; font-weight: 600; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--butter); color: var(--ink); display: inline-flex; align-items: center; justify-content: center; }
+.viewswitch { display: inline-flex; }
+.viewswitch button { width: 44px; height: 44px; border: 0; padding: 0; background: transparent; display: inline-flex; align-items: center; justify-content: center; color: var(--ink); }
+.viewswitch button > span { width: 44px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--ink); background: var(--card); }
+.viewswitch button:first-child > span { border-radius: 10px 0 0 10px; border-right: 0; }
+.viewswitch button:last-child > span { border-radius: 0 10px 10px 0; }
+.viewswitch button[aria-pressed="true"] > span { background: var(--ink); color: var(--card); }
+.thought-wrap { position: relative; }
+.thought-wrap .thought-card { padding-right: 52px; }
+.pin-btn { position: absolute; right: 4px; top: 4px; width: 44px; height: 44px; border: 0; background: transparent; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; color: var(--ink); }
+.pin-btn i { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--ink); display: inline-flex; align-items: center; justify-content: center; background: var(--card); }
+.pin-btn.on i { background: var(--lilac); }
+.swipe-hint.up { left: 50%; transform: translateX(-50%); background: var(--blue); }
+.flip-item { display: flex; flex-direction: column; gap: 10px; padding: 16px; box-shadow: 4px 4px 0 var(--ink); }
+.flip-poster { width: 46%; aspect-ratio: 2 / 3; align-self: center; border-radius: 8px; transform: rotate(-2deg); box-shadow: 3px 3px 0 var(--ink); }
