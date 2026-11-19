@@ -28,6 +28,8 @@ jobs:
           # filled in from Settings > Secrets and variables > Actions > Variables (see SETUP.md)
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+      # the private speech model is served from this site, so voice typing never talks to another server
+      - run: scripts/get-voice-model.sh out/models
       - run: touch out/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:

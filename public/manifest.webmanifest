@@ -7,6 +7,10 @@
   "display": "standalone",
   "background_color": "#EFEDE8",
   "theme_color": "#EFEDE8",
+  "shortcuts": [
+    { "name": "New thought", "short_name": "New thought", "url": "./write/?kind=card", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "Speak a thought", "short_name": "Speak", "url": "./write/?kind=card&speak=1", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
+  ],
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },

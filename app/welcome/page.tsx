@@ -43,7 +43,7 @@ export default function Welcome() {
           </>
         )}
         <p className="small muted" style={{ margin: "6px 0 0", textAlign: "center" }}>
-          Private by default. Nothing reads or interprets your thoughts.
+          <strong style={{ fontWeight: 600 }}>Yours, and only yours.</strong> No ads, no AI reading your words. Take everything with you, any time.
         </p>
       </div>
     </main>

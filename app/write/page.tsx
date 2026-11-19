@@ -121,7 +121,7 @@ function Write() {
         />
       </div>
 
-      <Dictate onText={(t) => setBody((b) => (b && !/\s$/.test(b) ? b + " " : b) + t)} />
+      <Dictate autoSpeak={q.get("speak") === "1"} onText={(t) => setBody((b) => (b && !/\s$/.test(b) ? b + " " : b) + t)} />
 
       <Topics value={topics} onChange={setTopics} known={known} />
 

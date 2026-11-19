@@ -3,12 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/copy-voice-runtime.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-voice-runtime.mjs",
     "build": "next build",
     "start": "npx serve out"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.3.2",
     "@supabase/supabase-js": "^2.119.0",
+    "fflate": "^0.8.2",
     "next": "^16.4.6",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"

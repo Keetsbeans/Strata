@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useApp } from "../providers";
 import Icon from "@/components/Icon";
 import Dialog from "@/components/Dialog";
+import { plainTextZip } from "@/lib/exportText";
+import { getVoiceMode, liveSupported, setVoiceMode } from "@/lib/voice";
 import { addFingerprint, fingerprintEnabled, fingerprintSupported, lockEnabled, removeFingerprint, setPin, turnOffLock } from "@/lib/lock";
 
 function Switch({ on, onChange, label }: { on: boolean; onChange: () => void; label: string }) {
@@ -34,6 +36,8 @@ export default function Settings() {
   const [finger, setFinger] = useState(false);
   const [tick, setTick] = useState(true);
   const [alwaysCard, setAlwaysCard] = useState(false);
+  const [live, setLive] = useState(false);
+  const [canLive, setCanLive] = useState(false);
   const [pinStep, setPinStep] = useState<null | { first?: string }>(null);
   const [pin, setPinText] = useState("");
   const [msg, setMsg] = useState("");
@@ -42,6 +46,8 @@ export default function Settings() {
   useEffect(() => {
     setLock(lockEnabled());
     setFinger(fingerprintEnabled());
+    setLive(getVoiceMode() === "live");
+    setCanLive(liveSupported());
     try {
       setTick(localStorage.getItem("strata:tick") !== "off");
       setAlwaysCard(localStorage.getItem("strata:always-card") === "1");
@@ -90,9 +96,10 @@ export default function Settings() {
 
   const exportAll = async () => {
     const data = await store.exportAll();
+    const zip = plainTextZip(data as Parameters<typeof plainTextZip>[0]);
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
-    a.download = `strata-export-${new Date().toISOString().slice(0, 10)}.json`;
+    a.href = URL.createObjectURL(new Blob([zip as BlobPart], { type: "application/zip" }));
+    a.download = `strata-export-${new Date().toISOString().slice(0, 10)}.zip`;
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -164,11 +171,23 @@ export default function Settings() {
         <Row title="Always start with a card" sub="Skip the card or page question">
           <Switch label="Always start with a card" on={alwaysCard} onChange={() => (flag("strata:always-card", alwaysCard ? null : "1"), setAlwaysCard(!alwaysCard))} />
         </Row>
+        {canLive && (
+          <Row
+            title="Live voice typing"
+            sub={
+              live
+                ? "On: words appear as you speak, but your phone's speech service (Google on Android, Apple on iPhone) hears your voice."
+                : "Off: your voice is turned into text on this phone and never sent anywhere. Turn on to see words appear as you speak."
+            }
+          >
+            <Switch label="Live voice typing" on={live} onChange={() => (setVoiceMode(live ? "private" : "live"), setLive(!live))} />
+          </Row>
+        )}
       </section>
 
       <section className="stack" style={{ gap: 10 }}>
         <h2 style={{ fontSize: 15 }}>Your data</h2>
-        <Row title="Export everything" sub="Every thought, thread and earlier version, as one file">
+        <Row title="Export everything" sub="Every thought, thread and earlier version, as plain text files anyone can open">
           <button className="btn sm" onClick={exportAll}>Export</button>
         </Row>
         <Link href="/discarded/" className="setting" style={{ textDecoration: "none" }}>
