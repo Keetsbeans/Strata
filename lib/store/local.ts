@@ -1,10 +1,19 @@
-import type { Thought, ThoughtVersion, Thread } from "@/lib/types";
+import type { Collection, CollectionItem, Interest, SavedLink, Thought, ThoughtVersion, Thread } from "@/lib/types";
 import { DISCARD_DAYS } from "@/lib/types";
-import type { NewThought, Store, ThoughtPatch } from "./types";
+import type { ImportResult, InterestPatch, NewInterest, NewThought, ShelfImport, Store, ThoughtPatch } from "./types";
 import { sampleData } from "./sample";
+import { interestKey } from "@/lib/catalog/match";
 
 /** Try-out mode: everything lives in this browser only (localStorage). */
-type DB = { thoughts: Thought[]; threads: Thread[]; versions: ThoughtVersion[] };
+type DB = {
+  thoughts: Thought[];
+  threads: Thread[];
+  versions: ThoughtVersion[];
+  interests: Interest[];
+  collections: Collection[];
+  collectionItems: CollectionItem[];
+  links: SavedLink[];
+};
 const KEY = "strata:try:v1";
 
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36));
@@ -14,7 +23,8 @@ const newestFirst = (a: { created_at: string }, b: { created_at: string }) => b.
 function load(): DB {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw);
+    // try-outs started before stage 2 have no interests, collections or links yet
+    if (raw) return { interests: [], collections: [], collectionItems: [], links: [], ...JSON.parse(raw) };
   } catch {}
   const db = sampleData();
   save(db);
@@ -30,6 +40,28 @@ export function clearLocal() {
   try {
     localStorage.removeItem(KEY);
   } catch {}
+}
+
+export function newInterest(i: NewInterest, id: string, at: string): Interest {
+  return {
+    creator: "",
+    year: null,
+    image_url: null,
+    image_checked: false,
+    source: "manual",
+    source_id: null,
+    status: "want",
+    rating: null,
+    moods: [],
+    favourite: false,
+    links: [],
+    done_at: null,
+    nudged_at: null,
+    ...i,
+    id,
+    created_at: at,
+    updated_at: at,
+  };
 }
 
 export class LocalStore implements Store {
@@ -57,6 +89,8 @@ export class LocalStore implements Store {
       kept: false,
       topics: t.topics ?? [],
       thread_id: t.thread_id ?? null,
+      interest_id: t.interest_id ?? null,
+      source: null,
       created_at: now(),
       updated_at: now(),
       discarded_at: null,
@@ -96,6 +130,7 @@ export class LocalStore implements Store {
   async deleteThoughtsForever(ids: string[]) {
     this.db.thoughts = this.db.thoughts.filter((t) => !ids.includes(t.id));
     this.db.versions = this.db.versions.filter((v) => !ids.includes(v.thought_id));
+    this.db.collectionItems = this.db.collectionItems.filter((x) => !x.thought_id || !ids.includes(x.thought_id));
     this.write();
   }
 
@@ -181,5 +216,124 @@ export class LocalStore implements Store {
   }
   async exportAll() {
     return { exported_at: now(), ...this.db };
+  }
+
+  // ---------- interests ----------
+  async interests() {
+    return [...this.db.interests].sort(newestFirst);
+  }
+  async interest(id: string) {
+    return this.db.interests.find((x) => x.id === id) ?? null;
+  }
+  async addInterest(i: NewInterest) {
+    const it = newInterest(i, uid(), now());
+    this.db.interests.push(it);
+    this.write();
+    return it;
+  }
+  async updateInterest(id: string, patch: InterestPatch) {
+    const it = this.db.interests.find((x) => x.id === id);
+    if (!it) throw new Error("That item no longer exists.");
+    Object.assign(it, patch, { updated_at: now() });
+    this.write();
+    return it;
+  }
+  async deleteInterest(id: string) {
+    this.db.interests = this.db.interests.filter((x) => x.id !== id);
+    this.db.collectionItems = this.db.collectionItems.filter((x) => x.interest_id !== id);
+    for (const t of this.db.thoughts) if (t.interest_id === id) t.interest_id = null;
+    this.write();
+  }
+  async importShelf(data: ShelfImport): Promise<ImportResult> {
+    const res: ImportResult = { added: 0, updated: 0, thoughts: 0 };
+    const byKey = new Map(this.db.interests.map((x) => [interestKey(x), x]));
+    const ids = new Map<string, string>();
+    for (const { key, added_at, ...item } of data.items) {
+      const found = byKey.get(interestKey(item)) ?? byKey.get(interestKey({ ...item, year: null }));
+      if (found) {
+        // a watched film stays watched; a new rating fills an empty one
+        if (item.status === "done" && found.status !== "done") Object.assign(found, { status: "done", done_at: item.done_at ?? found.done_at });
+        if (item.rating && !found.rating) found.rating = item.rating;
+        found.updated_at = now();
+        ids.set(key, found.id);
+        res.updated++;
+      } else {
+        const it = newInterest(item, uid(), added_at && added_at < now() ? added_at : now());
+        this.db.interests.push(it);
+        byKey.set(interestKey(it), it);
+        ids.set(key, it.id);
+        res.added++;
+      }
+    }
+    for (const r of data.reviews) {
+      const interest_id = ids.get(r.key);
+      if (!interest_id || !r.body.trim()) continue;
+      const at = r.written_at < now() ? r.written_at : now();
+      if (this.db.thoughts.some((t) => t.interest_id === interest_id && t.source === data.source && t.created_at === at)) continue;
+      this.db.thoughts.push({
+        id: uid(), body: r.body.trim(), kind: r.body.length > 320 ? "page" : "card", topics: [], finished: true, kept: true,
+        thread_id: null, interest_id, source: data.source, created_at: at, updated_at: at, discarded_at: null, version_count: 0,
+      });
+      res.thoughts++;
+    }
+    this.write();
+    return res;
+  }
+
+  // ---------- collections ----------
+  private withItems(c: Collection) {
+    return { ...c, items: this.db.collectionItems.filter((x) => x.collection_id === c.id).sort((a, b) => a.added_at.localeCompare(b.added_at)) };
+  }
+  async collections() {
+    return [...this.db.collections].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).map((c) => this.withItems(c));
+  }
+  async collection(id: string) {
+    const c = this.db.collections.find((x) => x.id === id);
+    return c ? this.withItems(c) : null;
+  }
+  async addCollection(title: string, note = "") {
+    const c: Collection = { id: uid(), title, note, created_at: now(), updated_at: now() };
+    this.db.collections.push(c);
+    this.write();
+    return c;
+  }
+  async updateCollection(id: string, patch: { title?: string; note?: string }) {
+    const c = this.db.collections.find((x) => x.id === id);
+    if (!c) throw new Error("That collection no longer exists.");
+    Object.assign(c, patch, { updated_at: now() });
+    this.write();
+    return c;
+  }
+  async deleteCollection(id: string) {
+    this.db.collections = this.db.collections.filter((x) => x.id !== id);
+    this.db.collectionItems = this.db.collectionItems.filter((x) => x.collection_id !== id);
+    this.write();
+  }
+  async addToCollection(collectionId: string, what: { interest_id?: string; thought_id?: string }) {
+    const items = this.db.collectionItems.filter((x) => x.collection_id === collectionId);
+    if (items.some((x) => (what.interest_id && x.interest_id === what.interest_id) || (what.thought_id && x.thought_id === what.thought_id))) return;
+    this.db.collectionItems.push({ id: uid(), collection_id: collectionId, interest_id: what.interest_id ?? null, thought_id: what.thought_id ?? null, added_at: now() });
+    const c = this.db.collections.find((x) => x.id === collectionId);
+    if (c) c.updated_at = now();
+    this.write();
+  }
+  async removeFromCollection(itemId: string) {
+    this.db.collectionItems = this.db.collectionItems.filter((x) => x.id !== itemId);
+    this.write();
+  }
+
+  // ---------- links to sort ----------
+  async links() {
+    return [...this.db.links].sort(newestFirst);
+  }
+  async addLink(l: { url: string; title?: string; note?: string }) {
+    const link: SavedLink = { id: uid(), url: l.url, title: l.title ?? "", note: l.note ?? "", created_at: now() };
+    this.db.links.push(link);
+    this.write();
+    return link;
+  }
+  async removeLink(id: string) {
+    this.db.links = this.db.links.filter((x) => x.id !== id);
+    this.write();
   }
 }

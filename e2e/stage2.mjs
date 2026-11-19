@@ -1,0 +1,252 @@
+// Phone test for Strata stage 2 (interests, collections, Inbox, import, share).
+// Run after `npm run build`:  node e2e/stage2.mjs
+// Uses a Pixel 7 screen, try-out mode, and stand-in answers for the public catalogues,
+// so it works without a network connection.
+import { createRequire } from "node:module";
+import { createServer } from "node:http";
+import { readFile, stat, writeFile, mkdtemp } from "node:fs/promises";
+import { join, extname } from "node:path";
+import { tmpdir } from "node:os";
+import { zipSync, strToU8 } from "fflate";
+
+// Playwright is installed on the test machine, not in the app
+const { chromium, devices } = createRequire(import.meta.url)("playwright");
+
+const OUT = new URL("../out/", import.meta.url).pathname;
+const SHOTS = process.env.SHOTS || "";
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".webmanifest": "application/manifest+json", ".png": "image/png", ".svg": "image/svg+xml", ".txt": "text/plain" };
+
+const server = createServer(async (req, res) => {
+  let p = join(OUT, decodeURIComponent(new URL(req.url, "http://x").pathname));
+  try {
+    if ((await stat(p)).isDirectory()) p = join(p, "index.html");
+    res.writeHead(200, { "content-type": TYPES[extname(p)] || "application/octet-stream" });
+    res.end(await readFile(p));
+  } catch {
+    res.writeHead(404).end("not found");
+  }
+}).listen(0);
+const BASE = `http://127.0.0.1:${server.address().port}`;
+
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
+const sent = [];
+async function mockCatalogues(ctx) {
+  await ctx.route(/wikipedia\.org/, (r) => {
+    const q = new URL(r.request().url()).searchParams.get("gsrsearch") || "";
+    sent.push(q);
+    // answers with a film named after the search, like Wikipedia would
+    const name = q.replace(/hastemplate:.*$/, "").replace(/\b\d{4}\b/, "").trim();
+    const year = (q.match(/\b(\d{4})\b/) || [])[1] || "2022";
+    const by = name.toLowerCase() === "aftersun" ? "Charlotte Wells" : "Someone";
+    const pages = { 1: { pageid: name.length, index: 1, title: name + " (film)", description: `${year} film by ${by}`, thumbnail: { source: "https://upload.wikimedia.org/" + encodeURIComponent(name) + ".jpg" } } };
+    r.fulfill({ json: { query: { pages } } });
+  });
+  await ctx.route(/openlibrary\.org\/search/, (r) => {
+    sent.push(new URL(r.request().url()).searchParams.get("q"));
+    r.fulfill({ json: { docs: [{ key: "/works/OL1W", title: "The Remains of the Day", author_name: ["Kazuo Ishiguro"], first_publish_year: 1989, cover_i: 1 }] } });
+  });
+  await ctx.route(/musicbrainz\.org/, (r) => {
+    const u = r.request().url();
+    sent.push(new URL(u).searchParams.get("query"));
+    r.fulfill({ json: u.includes("release-group") ? { "release-groups": [{ id: "rg1", title: "Opus", "primary-type": "Album", "first-release-date": "2024", score: 100, "artist-credit": [{ name: "Ryuichi Sakamoto" }] }] } : { recordings: [] } });
+  });
+  await ctx.route(/(upload\.wikimedia\.org|covers\.openlibrary\.org|coverartarchive\.org|i\.ytimg\.com)/, (r) => r.fulfill({ body: PNG, contentType: "image/png" }));
+}
+
+const fail = (m) => {
+  throw new Error(m);
+};
+const seen = (loc) => loc.first().waitFor({ timeout: 6000 }).then(() => true, () => false);
+const ok = (c, m) => (c ? console.log("  ✓ " + m) : fail("✗ " + m));
+
+const browser = await chromium.launch();
+const ctx = await browser.newContext({ ...devices["Pixel 7"] });
+await mockCatalogues(ctx);
+await ctx.addInitScript(() => {
+  if (!sessionStorage.getItem("seeded")) {
+    localStorage.setItem("strata:mode", "local");
+    localStorage.setItem("strata:voice", "local");
+    sessionStorage.setItem("seeded", "1");
+  }
+});
+const page = await ctx.newPage();
+const errors = [];
+page.on("pageerror", (e) => errors.push(e.message));
+const shot = async (name) => SHOTS && (await page.screenshot({ path: join(SHOTS, name + ".png") }));
+const go = async (path) => {
+  await page.goto(BASE + path);
+  await page.waitForLoadState("networkidle");
+};
+
+try {
+  console.log("Interests");
+  await go("/interests/");
+  await page.getByText("Perfect Days").first().waitFor();
+  ok(await seen(page.getByText("Watched · 2 thoughts")), "sample film shows its two pinned thoughts");
+  await page.waitForFunction(() => document.querySelectorAll(".shelf img").length >= 3, null, { timeout: 8000 });
+  ok(true, "posters were looked up and shown");
+  await shot("01-interests");
+
+  await page.getByRole("button", { name: "Quiet" }).click();
+  ok((await page.locator(".shelf-item").count()) === 3, "mood filter shows the three quiet films");
+  await page.getByRole("button", { name: "Quiet" }).click();
+
+  console.log("Add a film from the catalogue");
+  await page.getByRole("link", { name: "Add" }).click();
+  await page.getByLabel("Search by title").fill("Aftersun");
+  await page.getByText("Charlotte Wells · 2022 · Film").waitFor();
+  ok(sent.some((q) => q && q.startsWith("Aftersun")), "only the typed title was sent");
+  await shot("02-add");
+  await page.locator(".item-row", { hasText: "Charlotte Wells" }).getByRole("button", { name: "Add" }).click();
+  await page.waitForURL(/\/interest\/\?id=/);
+  await page.getByRole("heading", { name: "Aftersun" }).waitFor();
+  await page.getByRole("button", { name: "Watched" }).click();
+  await page.getByRole("radio", { name: "5 out of 5" }).click();
+  await page.getByRole("button", { name: "Add mood" }).click();
+  await page.getByRole("button", { name: "Heavy" }).click();
+  ok(await seen(page.getByRole("button", { name: "Remove mood Heavy" })), "mood added");
+
+  console.log("Pin a thought to it");
+  await page.getByRole("link", { name: "Write a thought about it" }).click();
+  await page.getByText("About: Aftersun").waitFor();
+  await page.getByLabel("Your thought").fill("The last scene keeps playing in my head.");
+  await page.getByRole("button", { name: "Save" }).click();
+  await page.waitForURL(/\/interest\/\?id=/);
+  await page.getByText("The last scene keeps playing in my head.").waitFor();
+  ok(true, "new thought shows on the film's page");
+  await page.getByRole("button", { name: "Add to a collection" }).click();
+  await page.getByRole("button", { name: "Films that stayed with me" }).click();
+  await page.locator(".card", { hasText: "Films that stayed with me" }).first().waitFor();
+  ok(true, "film added to a collection");
+  await shot("03-film-page");
+
+  console.log("Collections and Pick up again");
+  await page.getByRole("link", { name: /Films that stayed with me/ }).click();
+  await page.waitForURL(/\/collection\//);
+  await page.getByRole("heading", { name: /Pick up again|From further back/ }).waitFor();
+  ok(true, "Pick up again row on the collection");
+  ok((await page.locator(".pickup-card").count()) >= 3, "row holds the collection's thoughts");
+  ok(await seen(page.getByText("Aftersun").first()), "Aftersun on the shelf");
+  await shot("04-collection");
+
+  console.log("Pin an existing thought from its own page");
+  await go("/thoughts/");
+  await page.getByText("A website is closer to a room than a poster.").click();
+  await page.getByRole("button", { name: "Pin to a film, book or song" }).click();
+  await page.getByRole("button", { name: /Columbus/ }).click();
+  ok(await seen(page.getByRole("link", { name: /Columbus/ })), "thought shows the film it's pinned to");
+
+  console.log("Book and music search");
+  await go("/interests/add/?kind=book");
+  await page.getByLabel("Search by title").fill("remains of the day");
+  ok(await seen(page.getByText("Already in your interests")), "existing book found on the shelf first");
+  await page.getByRole("button", { name: "Music" }).click();
+  await page.getByLabel("Search by title").fill("Opus");
+  await page.getByText("Ryuichi Sakamoto · 2024 · Album").waitFor({ timeout: 6000 });
+  ok(true, "music search shows albums");
+
+  console.log("Inbox");
+  // a thought from a year ago today, and a film saved six weeks ago, are in the sample data
+  await page.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem("strata:try:v1"));
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 1);
+    db.thoughts.push({ id: "old1", body: "The best ideas this week all arrived while I was doing the dishes.", kind: "card", topics: [], finished: true, kept: false, thread_id: null, created_at: d.toISOString(), updated_at: d.toISOString(), discarded_at: null, version_count: 0 });
+    localStorage.setItem("strata:try:v1", JSON.stringify(db));
+  });
+  await go("/inbox/");
+  ok(await seen(page.getByText("A year ago today")), "a year ago today");
+  ok(await seen(page.getByText("Still want to watch?")), "still want to watch (Paterson)");
+  await shot("05-inbox-back");
+  await page.getByRole("button", { name: "Keep waiting" }).click();
+  await page.getByText("Still want to watch?").waitFor({ state: "detached" });
+  ok(true, "Keep waiting puts it away for a month");
+  await page.getByRole("button", { name: /To sort/ }).click();
+  await page.getByLabel("Paste a link").fill("https://letterboxd.com/film/columbus-2017/");
+  await page.getByRole("button", { name: "Save" }).click();
+  await page.getByText("letterboxd.com · today").waitFor();
+  await shot("06-inbox-sort");
+  await page.locator(".item-row", { hasText: "Slow living" }).getByRole("button", { name: "File it" }).click();
+  await page.getByRole("button", { name: "Article" }).click();
+  await page.getByRole("button", { name: /Add to interests/ }).click();
+  await page.waitForURL(/\/interest\//);
+  ok(await seen(page.getByRole("heading", { name: "Slow living" })), "filed link became an article");
+
+  console.log("Share to Strata");
+  await go("/share/?title=" + encodeURIComponent("Paterson (2016) - IMDb") + "&text=" + encodeURIComponent("https://www.imdb.com/title/tt5247022/"));
+  ok(await seen(page.getByText("recognised as a film")), "shared IMDb link recognised as a film");
+  ok((await page.getByLabel("Title").inputValue()) === "Paterson", "title cleaned up");
+  await page.getByLabel("A thought to go with it (optional)").fill("Maya said this one is like Perfect Days");
+  await shot("07-share");
+  await page.getByRole("radio", { name: /Inbox, sort later/ }).click();
+  await page.getByRole("button", { name: "Save" }).click();
+  await page.waitForURL(/\/inbox\//);
+  ok(await seen(page.getByText("Paterson").first()), "shared link waits in To sort");
+  const manifest = await (await fetch(BASE + "/manifest.webmanifest")).json();
+  ok(manifest.share_target?.action === "./share/", "manifest offers Strata in the share menu");
+
+  console.log("Letterboxd import");
+  const dir = await mkdtemp(join(tmpdir(), "strata-"));
+  const zip = zipSync({
+    "watched.csv": strToU8("Date,Name,Year,Letterboxd URI\n2024-03-02,Columbus,2017,https://boxd.it/a\n2024-05-01,Past Lives,2023,https://boxd.it/b\n"),
+    "ratings.csv": strToU8("Date,Name,Year,Letterboxd URI,Rating\n2024-05-01,Past Lives,2023,https://boxd.it/b,4.5\n"),
+    "reviews.csv": strToU8('Date,Name,Year,Letterboxd URI,Rating,Rewatch,Review,Tags,Watched Date\n2024-05-02,Past Lives,2023,https://boxd.it/b,4.5,,"Two people, one ""what if"", and a bar in New York.",,2024-05-01\n'),
+    "watchlist.csv": strToU8("Date,Name,Year,Letterboxd URI\n2024-01-10,Stalker,1979,https://boxd.it/c\n"),
+  });
+  await writeFile(join(dir, "letterboxd-export.zip"), zip);
+  await go("/interests/import/");
+  await page.getByLabel("Pick your Letterboxd export file").setInputFiles(join(dir, "letterboxd-export.zip"));
+  await page.getByText("Found in your file").waitFor();
+  ok(await seen(page.getByRole("button", { name: "Add 3 films to my interests" })), "3 films found (2 watched, 1 on the watchlist)");
+  await shot("08-import");
+  await page.getByRole("button", { name: "Add 3 films to my interests" }).click();
+  await page.getByText("Your shelf is in").waitFor();
+  ok(await seen(page.getByText(/2 new films, 1 you already had, and 1 review as thoughts/)), "Columbus matched, review became a thought");
+  // importing again adds nothing twice
+  await go("/interests/import/");
+  await page.getByLabel("Pick your Letterboxd export file").setInputFiles(join(dir, "letterboxd-export.zip"));
+  await page.getByRole("button", { name: "Add 3 films to my interests" }).click();
+  await page.getByText(/0 new films, 3 you already had\./).waitFor();
+  ok(true, "second import adds nothing twice");
+  await go("/interests/?kind=film");
+  await page.getByText("Past Lives").click();
+  await page.getByText("Two people, one \"what if\", and a bar in New York.").waitFor();
+  ok(await seen(page.getByText(/2 May 2024 · .* · from Letterboxd/)), "review kept its date and source");
+  ok((await page.getByRole("radio", { name: "5 out of 5" }).getAttribute("aria-checked")) === "true", "4.5 stars became 5 dots");
+
+  console.log("Goodreads import");
+  const gr = 'Book Id,Title,Author,My Rating,Year Published,Original Publication Year,Date Read,Date Added,Exclusive Shelf,My Review\n1,"The Remains of the Day",Kazuo Ishiguro,5,2005,1989,2023/02/01,2023/01/01,read,"Quiet<br/>and devastating."\n2,Stoner,John Williams,0,2006,1965,,2024/02/01,to-read,\n';
+  await writeFile(join(dir, "goodreads_library_export.csv"), gr);
+  await go("/interests/import/");
+  await page.getByRole("button", { name: /Goodreads/ }).click();
+  await page.getByLabel("Pick your Goodreads export file").setInputFiles(join(dir, "goodreads_library_export.csv"));
+  await page.getByRole("button", { name: "Add 2 books to my interests" }).click();
+  await page.getByText(/1 new book, 1 you already had, and 1 review as thoughts/).waitFor();
+  ok(true, "Goodreads shelf in; existing book matched");
+
+  console.log("Home and export");
+  await go("/");
+  ok(await seen(page.getByText("Recent interests")), "Home shows recent interests");
+  ok(await seen(page.getByRole("link", { name: /Collections/ }).first()), "Home has a Collections folder");
+  await shot("09-home");
+
+  console.log("Remove an item: its thoughts stay");
+  await go("/interests/?kind=film");
+  await page.getByText("Aftersun").click();
+  await page.getByRole("button", { name: "Remove from interests" }).click();
+  await page.getByRole("button", { name: "Remove it" }).click();
+  await page.waitForURL(/\/interests\//);
+  await go("/thoughts/");
+  ok(await seen(page.getByText("The last scene keeps playing in my head.")), "thought stayed after its film was removed");
+
+  ok(errors.length === 0, "no page errors" + (errors.length ? ": " + errors.join(" | ") : ""));
+  console.log("\nAll stage 2 checks passed.");
+} catch (e) {
+  console.error(e.message);
+  await page.screenshot({ path: join(tmpdir(), "strata-fail.png") });
+  console.error("Screenshot of the failure: " + join(tmpdir(), "strata-fail.png"));
+  process.exitCode = 1;
+} finally {
+  await browser.close();
+  server.close();
+}

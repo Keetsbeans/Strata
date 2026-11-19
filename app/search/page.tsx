@@ -2,7 +2,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useApp } from "../providers";
-import type { Thought } from "@/lib/types";
+import type { Interest, Thought } from "@/lib/types";
+import Poster from "@/components/Poster";
+import { details } from "@/lib/interests";
 import Icon from "@/components/Icon";
 import Mascot from "@/components/Mascot";
 import ThoughtCard from "@/components/ThoughtCard";
@@ -21,6 +23,7 @@ export default function Search() {
   const { store } = useApp();
   const [q, setQ] = useState("");
   const [results, setResults] = useState<Thought[] | null>(null);
+  const [items, setItems] = useState<Interest[]>([]);
   const [recent, setRecent] = useState<string[]>([]);
   useEffect(() => setRecent(readRecent()), []);
 
@@ -28,7 +31,10 @@ export default function Search() {
     const term = q.trim();
     if (!term) return setResults(null);
     const t = setTimeout(async () => {
-      setResults(await store.search(term));
+      const words = term.toLowerCase().split(/\s+/);
+      const [found, all] = await Promise.all([store.search(term), store.interests()]);
+      setItems(all.filter((i) => words.every((w) => (i.title + " " + i.creator + " " + i.moods.join(" ")).toLowerCase().includes(w))).slice(0, 8));
+      setResults(found);
       const next = [term, ...readRecent().filter((r) => r.toLowerCase() !== term.toLowerCase())].slice(0, 6);
       try {
         localStorage.setItem(RECENT, JSON.stringify(next));
@@ -53,7 +59,7 @@ export default function Search() {
         <div className="row">
           <label className="search-box grow">
             <Icon name="search" size={18} />
-            <input type="search" autoFocus placeholder="Search your thoughts" aria-label="Search your archive" value={q} onChange={(e) => setQ(e.target.value)} />
+            <input type="search" autoFocus placeholder="Search thoughts and interests" aria-label="Search your archive" value={q} onChange={(e) => setQ(e.target.value)} />
           </label>
           <Link className="btn" href="/">
             Close
@@ -70,6 +76,20 @@ export default function Search() {
             )}
           </div>
         )}
+        {results && items.length > 0 && (
+          <div className="stack" style={{ gap: 8 }}>
+            <span className="muted" style={{ fontSize: 13 }}>In your interests</span>
+            {items.map((i) => (
+              <Link key={i.id} href={`/interest/?id=${i.id}`} className="item-row">
+                <Poster src={i.image_url} title={i.title} kind={i.kind} className="thumb" />
+                <span className="grow">
+                  <strong>{i.title}</strong>
+                  <span className="sub">{details(i)}</span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
         {results && results.length > 0 && (
           <>
             <span className="muted" style={{ fontSize: 13 }}>
@@ -82,7 +102,7 @@ export default function Search() {
             </div>
           </>
         )}
-        {results && results.length === 0 && (
+        {results && results.length === 0 && items.length === 0 && (
           <div className="empty">
             <Mascot size={72} eyes="look" mouth="flat" arms="chin" tilt={-5} />
             <h2>Nothing for “{q.trim()}”</h2>

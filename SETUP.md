@@ -49,3 +49,13 @@ Then open http://localhost:3000. Put the two Supabase values in a file called `.
 - Discarded thoughts and threads are removed for good after 30 days.
 - The app lock PIN is never stored, only a slow salted hash of it, on the phone.
 - Time capsules (stage 3) will be encrypted on the phone with a key only you hold.
+
+## Optional: film posters from TMDB
+
+Out of the box, film posters come from Wikipedia, book covers from Open Library and music covers from MusicBrainz. Nothing to set up.
+
+To use TMDB for films instead: make a free account at themoviedb.org, open Settings > API and copy the "API Key". In GitHub, open the repository's Settings > Secrets and variables > Actions > Variables, add a variable named `TMDB_KEY` with that key, then run the deploy again (Actions > Deploy to GitHub Pages > Run workflow). The key ends up inside the public app; TMDB read keys only allow looking things up.
+
+## Updating the database for stage 2
+
+If you already ran `supabase/schema.sql` before, run the whole file again. It only adds what is new (interests, collections, Inbox links) and keeps your data.

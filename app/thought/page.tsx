@@ -8,6 +8,9 @@ import { day, stamp, time } from "@/lib/dates";
 import Icon from "@/components/Icon";
 import Dialog from "@/components/Dialog";
 import ThreadPicker from "@/components/ThreadPicker";
+import Poster from "@/components/Poster";
+import { CollectionPicker, InterestPicker } from "@/components/Pickers";
+import { details } from "@/lib/interests";
 import { preview, topicColour } from "@/components/ThoughtCard";
 
 const times = (n: number) => (n === 1 ? "once" : n === 2 ? "twice" : `${n} times`);
@@ -20,15 +23,18 @@ function ThoughtView() {
     const t = await store.thought(id);
     const thread = t?.thread_id ? await store.thread(t.thread_id) : null;
     const inThread = thread ? (await store.thoughts()).filter((x) => x.thread_id === thread.id).length : 0;
-    return { t, thread, inThread };
+    const about = t?.interest_id ? await store.interest(t.interest_id) : null;
+    return { t, thread, inThread, about };
   }, [store, id]);
   const [versions, setVersions] = useState<{ id: string; body: string; created_at: string }[] | null>(null);
   const [asking, setAsking] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [pinning, setPinning] = useState<null | "interest" | "collection">(null);
+  const [saved, setSaved] = useState("");
 
   if (error) return <main className="screen no-nav"><p className="error">{error}</p></main>;
   if (!data) return <main className="screen no-nav" />;
-  const { t, thread, inThread } = data;
+  const { t, thread, inThread, about } = data;
   if (!t || t.discarded_at)
     return (
       <main className="screen no-nav">
@@ -93,16 +99,37 @@ function ThoughtView() {
       )}
       <section className="stack" style={{ gap: 8 }}>
         <h2 style={{ fontSize: 15 }}>Connected to</h2>
+        {about && (
+          <div className="item-row" style={{ paddingRight: 6 }}>
+            <Poster src={about.image_url} title={about.title} kind={about.kind} className="thumb" />
+            <Link className="grow" href={`/interest/?id=${about.id}`} style={{ textDecoration: "none" }}>
+              <strong>{about.title}</strong>
+              <span className="sub">{details(about)}</span>
+            </Link>
+            <button className="icon-btn" style={{ border: 0, background: "transparent" }} aria-label={`Unpin from ${about.title}`} onClick={async () => (await store.updateThought(t.id, { interest_id: null }), reload())}>
+              <Icon name="close" size={16} />
+            </button>
+          </div>
+        )}
         {thread ? (
           <Link href={`/thread/?id=${thread.id}`} className="card between" style={{ textDecoration: "none" }}>
             <strong style={{ fontWeight: 600 }}>{thread.title}</strong>
             <span className="small muted">Thread · {inThread} {inThread === 1 ? "thought" : "thoughts"}</span>
           </Link>
         ) : (
-          <span className="small muted">Not part of a thread yet.</span>
+          !about && <span className="small muted">Not part of a thread yet.</span>
         )}
       </section>
       <div className="stack" style={{ gap: 10 }}>
+        {!about && (
+          <button className="btn block" onClick={() => setPinning("interest")}>
+            Pin to a film, book or song
+          </button>
+        )}
+        <button className="btn block" onClick={() => setPinning("collection")}>
+          Add to a collection
+        </button>
+        {saved && <span className="small muted" role="status" style={{ textAlign: "center" }}>{saved}</span>}
         <button className="btn block" onClick={() => setPicking(true)}>
           {thread ? "Move to another thread" : "Add to a thread"}
         </button>
@@ -128,6 +155,29 @@ function ThoughtView() {
               </button>
             </>
           }
+        />
+      )}
+      {pinning === "interest" && (
+        <InterestPicker
+          store={store}
+          onClose={() => setPinning(null)}
+          onPick={async (iid) => {
+            await store.updateThought(t.id, { interest_id: iid });
+            setPinning(null);
+            reload();
+          }}
+        />
+      )}
+      {pinning === "collection" && (
+        <CollectionPicker
+          store={store}
+          onClose={() => setPinning(null)}
+          onPick={async (cid) => {
+            await store.addToCollection(cid, { thought_id: t.id });
+            const c = await store.collection(cid);
+            setPinning(null);
+            setSaved(`Added to ${c?.title ?? "the collection"}.`);
+          }}
         />
       )}
       {picking && (

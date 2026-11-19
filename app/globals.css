@@ -243,3 +243,49 @@ body:has(.lock) { background: var(--ink); }
 .pickup::-webkit-scrollbar { display: none; }
 .pickup-card { flex: 0 0 74%; scroll-snap-align: start; display: flex; flex-direction: column; gap: 6px; text-decoration: none; min-height: 116px; box-shadow: 3px 3px 0 var(--lilac); text-align: left; }
 .pickup-more { flex-basis: 40%; align-items: center; justify-content: center; text-align: center; border-style: dashed; background: transparent; box-shadow: none; }
+
+/* ---------- stage 2: interests, collections, inbox ---------- */
+.poster { position: relative; overflow: hidden; display: block; border: 1px solid var(--ink); border-radius: 10px; }
+.poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.poster-letter { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 600; color: var(--ink); opacity: 0.85; }
+.poster.thumb { flex: 0 0 44px; width: 44px; height: 58px; border-radius: 7px; }
+.poster.thumb .poster-letter { font-size: 18px; }
+.poster.hero { flex: 0 0 112px; width: 112px; height: 158px; border-radius: 8px; box-shadow: 4px 4px 0 var(--ink); transform: rotate(-3deg); }
+.shelf { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 14px; }
+.shelf-item { display: flex; flex-direction: column; gap: 8px; text-decoration: none; min-width: 0; }
+.shelf-item .poster { aspect-ratio: 2 / 3; }
+.shelf-item .label { position: absolute; left: 8px; right: 8px; bottom: 8px; padding: 4px 9px; background: var(--card); border: 1px solid var(--ink); border-radius: 6px; font-size: 14px; font-weight: 600; line-height: 1.15; width: fit-content; max-width: calc(100% - 16px); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.shelf-item .badge { position: absolute; right: 8px; top: 8px; }
+.mood { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; background: var(--card); border: 1px solid var(--ink); border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.mood i { width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--ink); display: inline-block; }
+.mood-chip { flex: 0 0 auto; min-height: 38px; padding: 0 12px; display: inline-flex; align-items: center; gap: 7px; border: 1px dashed var(--ink); border-radius: 18px; background: transparent; font-size: 13px; font-weight: 500; }
+.mood-chip[aria-pressed="true"] { border-style: solid; background: var(--card); font-weight: 600; box-shadow: 2px 2px 0 var(--ink); }
+.mood-chip i { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--ink); display: inline-block; }
+.dot-r { display: inline-block; border-radius: 50%; border: 1px solid var(--ink); }
+.dot-btn { width: 30px; height: 36px; padding: 0; border: 0; background: none; display: inline-flex; align-items: center; justify-content: center; }
+.seg { display: flex; padding: 3px; border: 1px solid var(--ink); border-radius: 12px; background: var(--card); }
+.seg button { min-height: 42px; padding: 0 12px; border: 1px solid transparent; border-radius: 10px; background: transparent; font-size: 13px; font-weight: 500; white-space: nowrap; }
+.seg button[aria-pressed="true"] { border-color: var(--ink); background: var(--butter); font-weight: 600; }
+.seg.wide { width: 100%; }
+.seg.wide button { flex: 1 1 0; }
+.seg.wide button[aria-pressed="true"] { background: var(--ink); color: var(--card); }
+.seg .count { display: inline-flex; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px; border-radius: 10px; border: 1px solid currentColor; font-size: 11px; align-items: center; justify-content: center; }
+.item-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--card); border: 1px solid var(--ink); border-radius: 12px; text-decoration: none; text-align: left; width: 100%; }
+.item-row .grow { min-width: 0; display: flex; flex-direction: column; }
+.item-row strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item-row .sub { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link-tile { flex: 0 0 40px; height: 40px; border-radius: 8px; border: 1px solid var(--ink); background: var(--butter); display: flex; align-items: center; justify-content: center; }
+.paste { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 6px 0 16px; border: 1px dashed var(--ink); border-radius: 12px; }
+.paste input { flex-grow: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 15px; }
+.paste .btn { min-height: 38px; padding: 0 14px; font-size: 13px; }
+.back-card { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; }
+.back-card .serif { font-size: 18px; line-height: 1.35; margin: 0; }
+.coll-card { display: flex; flex-direction: column; gap: 10px; text-decoration: none; padding: 14px 16px; }
+.coll-strip { display: flex; gap: 6px; }
+.coll-strip .poster { width: 40px; height: 54px; border-radius: 6px; flex: 0 0 40px; }
+.coll-strip .poster .poster-letter { font-size: 16px; }
+.file-drop { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 14px; border: 1px dashed var(--ink); border-radius: 12px; cursor: pointer; }
+.file-drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.stat { flex: 1 1 0; display: flex; flex-direction: column; padding: 8px 10px; border: 1px solid var(--ink); border-radius: 10px; }
+.stat strong { font-size: 22px; font-weight: 600; line-height: 1.1; }
+.step-n { flex: 0 0 24px; height: 24px; border-radius: 50%; border: 1px solid var(--ink); background: var(--butter); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }

@@ -7,7 +7,7 @@ const items = [
   { href: "/", label: "Home" },
   { href: "/thoughts/", label: "Thoughts", also: ["/thought/", "/threads/", "/thread/", "/discarded/", "/review/"] },
   { href: "/search/", label: "Search", search: true },
-  { href: "/interests/", label: "Interests" },
+  { href: "/interests/", label: "Interests", also: ["/interest/", "/collections/", "/collection/"] },
   { href: "/inbox/", label: "Inbox" },
 ];
 
