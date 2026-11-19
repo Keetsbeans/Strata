@@ -7,12 +7,15 @@ import { useData } from "@/lib/useData";
 import { stamp } from "@/lib/dates";
 import Icon from "@/components/Icon";
 import Mascot from "@/components/Mascot";
+import Buddy from "@/components/Buddy";
+import SwipeCard from "@/components/SwipeCard";
 
 /** A folder opened: the thoughts you left halfway, as a deck of cards. One at a time. */
 export default function Stack() {
   const { store } = useApp();
   const router = useRouter();
   const [i, setI] = useState(0);
+  const [lean, setLean] = useState(0);
   const { data } = useData(async () => (await store.thoughts()).filter((t) => !t.finished), [store]);
   if (!data) return <main className="screen no-nav" />;
   const n = data.length;
@@ -33,12 +36,13 @@ export default function Stack() {
             {Array.from({ length: behind }, (_, k) => (
               <div key={k} className="card stack-behind" aria-hidden="true" style={{ transform: `rotate(${k ? 4 : -3}deg) translateY(${(k + 1) * -8}px)`, background: k ? "var(--butter)" : "var(--lilac)" }} />
             ))}
-            <article className="card stack-front" aria-label={`Thought ${(i % n) + 1} of ${n}`}>
+            <Buddy lean={lean} idle="chin" />
+            <SwipeCard key={i} className="card stack-front" label={`Thought ${(i % n) + 1} of ${n}`} onLeft={n > 1 ? () => setI(i + 1) : undefined} onRight={n > 1 ? () => setI(i + 1) : undefined} onLean={(l) => setLean(Math.abs(l))}>
               <span className="stack-tag">{stamp(t.created_at)}</span>
               <p className="ruled-text" style={{ margin: 0 }}>{t.body || "Empty so far."}</p>
-            </article>
+            </SwipeCard>
           </div>
-          <p className="small muted" style={{ textAlign: "center", margin: 0 }}>{(i % n) + 1} of {n}</p>
+          <p className="small muted" style={{ textAlign: "center", margin: 0 }}>{(i % n) + 1} of {n}{n > 1 ? " · swipe for the next one" : ""}</p>
           <div className="row">
             <Link className="btn ink shadow grow" href={`/write/?id=${t.id}`}>
               <Icon name="pen" size={16} /> Keep writing

@@ -240,8 +240,20 @@ try {
   ok(await seen(page.getByRole("link", { name: /^Collections, \d+$/ })), "Home has a Collections folder");
   await shot("09-home");
 
-  console.log("Settings and colour themes");
-  await page.getByRole("link", { name: "Settings" }).click();
+  console.log("Profile, settings and colour themes");
+  await page.getByRole("link", { name: "Your profile" }).click();
+  await page.waitForURL(/\/profile\//);
+  await page.getByRole("button", { name: "Add a name" }).click();
+  await page.getByLabel("Your name").fill("Chris");
+  await page.getByRole("button", { name: "Save" }).click();
+  ok(await seen(page.getByText("Chris", { exact: true })), "name saved on the profile");
+  ok(await seen(page.locator(".profile-stats b").first()), "profile shows your numbers");
+  ok(await seen(page.getByRole("button", { name: "Delete everything on this phone" })), "profile offers deleting your data");
+  await page.getByRole("button", { name: "Delete everything on this phone" }).click();
+  ok(await page.getByRole("button", { name: "Delete for good" }).isDisabled(), "delete waits until you type DELETE");
+  await page.getByRole("button", { name: "Keep everything" }).click();
+  await shot("12-profile");
+  await page.getByRole("link", { name: /^Settings/ }).click();
   await page.getByRole("radio", { name: /Navy and mustard/ }).click();
   ok((await page.evaluate(() => document.documentElement.dataset.theme)) === "navy", "theme switched");
   await shot("10-settings-navy");
@@ -281,10 +293,15 @@ try {
   await page.getByRole("link", { name: /20\d\d/ }).first().click();
   await page.waitForURL(/\/calendar\//);
   ok(await seen(page.locator(".cal-day.today")), "calendar opens from the month on Home");
+  ok((await page.locator(".cal-day.picked").count()) === 1, "one day is picked");
   ok((await page.locator(".cal-day .cal-dot").count()) > 0, "calendar marks days with thoughts");
   await shot("22-calendar");
   await page.getByRole("button", { name: "Previous month" }).click();
   ok(await seen(page.locator(".cal-day")), "calendar moves between months");
+  await go("/");
+  await page.locator(".strip-day").first().click();
+  await page.waitForURL(/\/calendar\/\?d=/);
+  ok(await seen(page.locator(".cal-day.picked")), "tapping a day on Home opens the calendar on that day");
 
   await go("/");
   await page.locator('a[href*="/stack/"]').first().click();
@@ -294,6 +311,25 @@ try {
   await page.getByRole("link", { name: "Keep writing" }).click();
   await page.waitForURL(/\/write\//);
   ok(true, "Keep writing opens the thought to finish it");
+
+  console.log("Swipe and mascot");
+  await go("/review/");
+  await page.locator(".deck-front").waitFor();
+  const before = await page.locator("header .small").innerText();
+  const box = await page.locator(".deck-front").boundingBox();
+  const y = box.y + box.height / 3;
+  await page.mouse.move(box.x + box.width / 2, y);
+  await page.mouse.down();
+  for (let k = 1; k <= 8; k++) await page.mouse.move(box.x + box.width / 2 + k * 25, y);
+  ok(await seen(page.locator(".swipe-hint.right")), "dragging right shows Keep");
+  ok((await page.locator(".card-mascot.arms-up").count()) === 1, "mascot cheers while you drag right");
+  await shot("24-swipe");
+  await page.mouse.up();
+  await page.waitForFunction((b) => document.querySelector("header .small")?.textContent !== b, before, { timeout: 4000 });
+  ok(true, "swiping right kept the card and moved on (" + before + " → " + (await page.locator("header .small").innerText()) + ")");
+  ok((await page.locator(".mascot.live").count()) > 0, "mascot moves on screen");
+  await go("/");
+  ok(await seen(page.locator(".has-mascot .card-mascot")), "mascot waves from the Pick up card on Home");
 
   ok(errors.length === 0, "no page errors" + (errors.length ? ": " + errors.join(" | ") : ""));
   console.log("\nAll stage 2 checks passed.");

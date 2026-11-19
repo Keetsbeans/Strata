@@ -15,6 +15,9 @@ const P: Record<string, string> = {
   mic: "M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3M9 21h6",
   stop: "M8 8h8v8H8z",
   settings: "M4 7h9M17 7h3M4 17h3M11 17h9M15 5v4M9 15v4",
+  calendar: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4",
+  user: "M5 20c.8-3.5 3.6-5.5 7-5.5s6.2 2 7 5.5",
+  chevron: "M10 6l6 6-6 6",
   link: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1",
 };
 
@@ -23,6 +26,7 @@ export default function Icon({ name, size = 20, color = "currentColor", width = 
     <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round">
       {name === "search" && <circle cx="11" cy="11" r="7" />}
       {name === "clock" && <circle cx="12" cy="12" r="9" />}
+      {name === "user" && <circle cx="12" cy="8.5" r="3.8" />}
       <path d={P[name]} />
     </svg>
   );
