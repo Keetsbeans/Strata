@@ -7,6 +7,7 @@ import { useData } from "@/lib/useData";
 import { day, relDay } from "@/lib/dates";
 import Nav from "@/components/Nav";
 import TopIcons from "@/components/TopIcons";
+import ThoughtTabs from "@/components/ThoughtTabs";
 import Dialog from "@/components/Dialog";
 import { preview } from "@/components/ThoughtCard";
 import Mascot from "@/components/Mascot";
@@ -30,6 +31,19 @@ function Threads() {
   const [state, setState] = useState<"" | "ongoing" | "resting">("");
   const [labels, setLabels] = useState<string[]>([]);
   const [sort, setSort] = useState<Sort>("recent");
+  // a short explainer the first few times, until it's put away
+  const [intro, setIntro] = useState(false);
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("strata:threads-intro")) setIntro(true);
+    } catch {}
+  }, []);
+  const hideIntro = () => {
+    setIntro(false);
+    try {
+      localStorage.setItem("strata:threads-intro", "1");
+    } catch {}
+  };
   useEffect(() => {
     const l = q.get("label");
     if (l) setLabels([l]);
@@ -80,17 +94,25 @@ function Threads() {
     <>
       <main className="screen">
         <header className="between" style={{ minHeight: 48 }}>
-          <h1 className="h-page">Threads</h1>
-          <span className="row" style={{ gap: 2 }}>
-            <TopIcons />
-            <button className="new-pill" onClick={() => setNaming(true)} aria-label="Start a new thread">
-              <span><Icon name="plus" size={15} width={2.4} /> New</span>
-            </button>
-          </span>
+          <h1 className="h-page">Thoughts</h1>
+          <TopIcons />
         </header>
-        <span className="muted" style={{ fontSize: 13, marginTop: -10 }}>
-          Your journal: one idea, followed over time.
-        </span>
+        <ThoughtTabs on="threads" unsorted={thoughts.filter((t) => t.finished && !t.topics.length && !t.kept).length} unfinished={thoughts.filter((t) => !t.finished).length} />
+        {intro ? (
+          <div className="card threads-intro">
+            <Mascot size={52} eyes="happy" arms="wave" />
+            <span className="stack grow" style={{ gap: 4 }}>
+              <strong>What&apos;s a thread?</strong>
+              <span className="small">One idea, followed over time. Start one from any thought, then add follow-ups as they come. A thought can be in more than one thread.</span>
+              <span className="small muted">Tip: press and hold any thought to add it to a thread.</span>
+              <button className="link small" style={{ alignSelf: "flex-start", minHeight: 44, minWidth: 44, fontWeight: 600 }} onClick={hideIntro}>Got it</button>
+            </span>
+          </div>
+        ) : (
+          <span className="muted" style={{ fontSize: 13, marginTop: -10 }}>
+            One idea, followed over time.
+          </span>
+        )}
         {threads.length > 0 && (
           <div className="stack" style={{ gap: 2 }}>
             <div className="pills" role="group" aria-label="Show">
@@ -110,8 +132,9 @@ function Threads() {
               ))}
             </div>
             <div className="between">
+              <span className="row" style={{ gap: 4 }}>
               <span className="muted" style={{ fontSize: 13 }}>
-                {filtering ? `${shown.length} of ${threads.length} threads` : `${threads.length} ${threads.length === 1 ? "thread" : "threads"}`}
+                {filtering ? `${shown.length} of ${threads.length}` : `${threads.length} ${threads.length === 1 ? "thread" : "threads"}`} ·
               </span>
               <label className="sort-pick">
                 <span className="sr-only">Sort threads</span>
@@ -122,6 +145,10 @@ function Threads() {
                 </select>
                 <span className="caret" aria-hidden="true" />
               </label>
+              </span>
+              <button className="new-pill" onClick={() => setNaming(true)} aria-label="Start a new thread">
+                <span><Icon name="plus" size={15} width={2.4} /> New thread</span>
+              </button>
             </div>
           </div>
         )}
@@ -138,8 +165,7 @@ function Threads() {
                   </span>
                   {root && <span className="serif" style={{ fontSize: 15, lineHeight: 1.3 }}>“{preview(root.body, 80)}”</span>}
                   <span className="small muted">
-                    {inside.length} {inside.length === 1 ? "thought" : "thoughts"}
-                    {linked ? ` · ${linked} linked` : ""} · {inside.length ? `latest ${relDay(latest)}` : `started ${day(th.created_at, { weekday: false })}`}
+                    {inside.length + linked} {inside.length + linked === 1 ? "thought" : "thoughts"} · {inside.length ? `latest ${relDay(latest)}` : `started ${day(th.created_at, { weekday: false })}`}
                   </span>
                   {!!th.labels?.length && (
                     <span className="row" style={{ gap: 4, flexWrap: "wrap", marginTop: 2 }}>

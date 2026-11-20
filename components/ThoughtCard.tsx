@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Thought } from "@/lib/types";
 import { stamp } from "@/lib/dates";
 import Icon from "./Icon";
+import { useLongPress } from "@/lib/longpress";
 
 const TAG_COLOURS = ["butter", "blue", "lilac", ""];
 /** the same topic always gets the same colour */
@@ -17,9 +18,10 @@ export function preview(body: string, n = 140) {
   return one.length > n ? one.slice(0, n - 1).trimEnd() + "…" : one || "Empty thought";
 }
 
-type Props = { t: Thought; selecting?: boolean; picked?: boolean; onPick?: () => void; href?: string; onPin?: () => void; threadName?: string };
+type Props = { t: Thought; selecting?: boolean; picked?: boolean; onPick?: () => void; href?: string; onPin?: () => void; threadName?: string; onHold?: () => void };
 
-export default function ThoughtCard({ t, selecting, picked, onPick, href, onPin, threadName }: Props) {
+export default function ThoughtCard({ t, selecting, picked, onPick, href, onPin, threadName, onHold }: Props) {
+  const hold = useLongPress(() => onHold?.());
   const inner = (
     <>
       {selecting && (
@@ -43,7 +45,7 @@ export default function ThoughtCard({ t, selecting, picked, onPick, href, onPin,
       </button>
     );
   const link = (
-    <Link className={cls} href={href ?? (t.finished ? `/thought/?id=${t.id}` : `/write/?id=${t.id}`)}>
+    <Link className={cls} href={href ?? (t.finished ? `/thought/?id=${t.id}` : `/write/?id=${t.id}`)} {...(onHold ? hold : {})}>
       {inner}
     </Link>
   );
@@ -51,7 +53,7 @@ export default function ThoughtCard({ t, selecting, picked, onPick, href, onPin,
   return (
     <div className="thought-wrap">
       {link}
-      <button className={"pin-btn" + (t.thread_id ? " on" : "")} aria-label={t.thread_id ? `In ${threadName ?? "a thread"}. Put it in another thread` : "Put it in a thread"} onClick={onPin}>
+      <button className={"pin-btn" + (t.thread_id ? " on" : "")} aria-label={t.thread_id ? `In ${threadName ?? "a thread"}. Add it to another thread` : "Add to a thread"} onClick={onPin}>
         <i><Icon name="pin" size={15} width={2} /></i>
       </button>
     </div>

@@ -26,19 +26,22 @@ function ThoughtView() {
     // what linked words point at, so a word whose target was deleted shows as plain text
     const targets = new Map<string, string>([...cols.map((c) => ["collection:" + c.id, c.title] as const), ...items.map((i) => ["interest:" + i.id, i.title] as const)]);
     const thread = t?.thread_id ? threads.find((x) => x.id === t.thread_id) ?? null : null;
-    const inThread = thread ? all.filter((x) => x.thread_id === thread.id && x.finished).length : 0;
     const isRoot = !!thread && rootOf(thread, all)?.id === t?.id;
     const about = t?.interest_id ? await store.interest(t.interest_id) : null;
     const mine = links.filter((l) => l.thought_id === id);
-    const linkedIn = mine.map((l) => threads.find((x) => x.id === l.thread_id)).filter((x): x is NonNullable<typeof x> => !!x);
     const others = threads
       .filter((x) => x.id !== t?.thread_id)
       .map((x) => {
         const root = rootOf(x, all);
         const n = all.filter((y) => y.thread_id === x.id && y.finished).length;
-        return { id: x.id, title: x.title, sub: `${root ? `Starts: “${preview(root.body, 34)}” · ` : ""}${n} ${n === 1 ? "thought" : "thoughts"}`, done: mine.some((l) => l.thread_id === x.id) ? "Already linked here" : undefined };
+        return { id: x.id, title: x.title, sub: `${root ? `Starts: “${preview(root.body, 34)}” · ` : ""}${n} ${n === 1 ? "thought" : "thoughts"}`, done: mine.some((l) => l.thread_id === x.id) ? "It's in this one already" : undefined };
       });
-    return { t, thread, inThread, isRoot, about, linkedIn, others, targets };
+    const count = (tid: string) => all.filter((y) => y.thread_id === tid && y.finished).length + links.filter((l) => l.thread_id === tid).length;
+    const inThreads = [
+      ...(thread ? [{ id: thread.id, title: thread.title, n: count(thread.id), link: null as string | null }] : []),
+      ...mine.map((l) => ({ id: l.thread_id, title: threads.find((x) => x.id === l.thread_id)?.title ?? "", n: count(l.thread_id), link: l.id as string | null })).filter((x) => x.title),
+    ];
+    return { t, thread, isRoot, about, inThreads, others, targets };
   }, [store, id]);
   const [versions, setVersions] = useState<{ id: string; body: string; created_at: string }[] | null>(null);
   const [asking, setAsking] = useState(false);
@@ -64,7 +67,7 @@ function ThoughtView() {
 
   if (error) return <main className="screen no-nav"><p className="error">{error}</p></main>;
   if (!data) return <main className="screen no-nav" />;
-  const { t, thread, inThread, isRoot, about, linkedIn, others, targets } = data;
+  const { t, thread, isRoot, about, inThreads, others, targets } = data;
   if (!t || t.discarded_at)
     return (
       <main className="screen no-nav">
@@ -168,45 +171,40 @@ function ThoughtView() {
           </div>
         </section>
       )}
-      <section className="card thread-box" aria-label="Its thread">
-        <h2 style={{ fontSize: 15 }}>Its thread</h2>
-        {thread ? (
-          <Link href={`/thread/?id=${thread.id}`} className="between" style={{ textDecoration: "none", gap: 10 }}>
-            <span className="stack" style={{ gap: 2 }}>
-              <span className="small muted">{isRoot ? "This thought starts the thread" : "This thought belongs to the thread"}</span>
-              <strong style={{ fontWeight: 600 }}>{thread.title}</strong>
-            </span>
-            <span className="small muted" style={{ whiteSpace: "nowrap" }}>{inThread} {inThread === 1 ? "thought" : "thoughts"} ›</span>
-          </Link>
+      <section className="card thread-box" aria-label="Threads">
+        <h2 style={{ fontSize: 15 }}>Threads</h2>
+        {inThreads.length ? (
+          <div className="stack" style={{ gap: 4 }}>
+            {inThreads.map((x) => (
+              <span key={x.id} className="row" style={{ gap: 4, alignItems: "center" }}>
+                <Link href={`/thread/?id=${x.id}`} className="between grow" style={{ textDecoration: "none", gap: 10, minHeight: 44 }}>
+                  <span className="stack" style={{ gap: 0 }}>
+                    <strong style={{ fontWeight: 600 }}>{x.title}</strong>
+                    {isRoot && x.id === thread?.id && <span className="small muted">This thought starts it</span>}
+                  </span>
+                  <span className="small muted" style={{ whiteSpace: "nowrap" }}>{x.n} {x.n === 1 ? "thought" : "thoughts"} ›</span>
+                </Link>
+                {!(isRoot && x.id === thread?.id) && (
+                  <button className="icon-btn" style={{ border: 0, background: "transparent", flex: "0 0 44px" }} aria-label={`Take it out of ${x.title}`} onClick={async () => (x.link ? await store.unlink(x.link) : await store.updateThought(t.id, { thread_id: null }), reload())}>
+                    <Icon name="close" size={14} />
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
         ) : (
-          <span className="small muted">Not in a thread yet. Start one to follow this idea over time: later thoughts grow under this one.</span>
+          <span className="small muted">Not in a thread yet. Add it to one, or start one from it, to follow this idea over time.</span>
         )}
         <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+          <button className="btn sm" onClick={() => setSheet("link")}>
+            Add to a thread
+          </button>
           {!thread && (
-            <button className="btn sm ink" onClick={() => (setName(""), setSheet("start"))}>
+            <button className="btn sm" onClick={() => (setName(""), setSheet("start"))}>
               Start a thread from this
             </button>
           )}
-          <button className="btn sm" onClick={() => setSheet("link")}>
-            {thread ? "Also show it in another thread" : "Show it in a thread"}
-          </button>
         </div>
-        {linkedIn.length > 0 && (
-          <p className="small muted" style={{ margin: 0 }}>
-            Also linked in {linkedIn.length} {linkedIn.length === 1 ? "thread" : "threads"}:{" "}
-            {linkedIn.map((x, i) => (
-              <span key={x.id}>
-                {i > 0 && ", "}
-                <Link href={`/thread/?id=${x.id}`} style={{ color: "var(--ink)" }}>{x.title}</Link>
-              </span>
-            ))}
-          </p>
-        )}
-        {thread && !isRoot && (
-          <button className="link small" style={{ alignSelf: "flex-start", minHeight: 32 }} onClick={async () => (await store.updateThought(t.id, { thread_id: null }), reload())}>
-            Take it out of {thread.title}
-          </button>
-        )}
       </section>
       {saved && <span className="small muted" role="status" style={{ textAlign: "center" }}>{saved}</span>}
       {!about && (
@@ -296,17 +294,20 @@ function ThoughtView() {
       )}
       {sheet === "link" && (
         <PickMany
-          title="Link to a thread"
-          intro="It shows in that thread as a link, on its own little branch. Nothing is copied, and the thought stays where it is. Tick one or more."
+          title="Add to a thread"
+          intro="It shows in each thread you tick, in date order. Nothing is copied."
           items={others}
           find="Find a thread"
           empty="No other threads yet. Start one from any thought."
-          confirm={(n) => `Link to ${n} ${n === 1 ? "thread" : "threads"}`}
+          confirm={(n) => `Add to ${n} ${n === 1 ? "thread" : "threads"}`}
           onClose={() => setSheet(null)}
           onDone={async (ids) => {
-            await store.linkToThreads(t.id, ids);
+            // a thought in no thread yet joins the first one; the rest show it too
+            const rest = t.thread_id ? ids : ids.slice(1);
+            if (!t.thread_id && ids[0]) await store.updateThought(t.id, { thread_id: ids[0] });
+            await store.linkToThreads(t.id, rest);
             setSheet(null);
-            setSaved(`Linked to ${ids.length} ${ids.length === 1 ? "thread" : "threads"}.`);
+            setSaved(`Added to ${ids.length} ${ids.length === 1 ? "thread" : "threads"}.`);
             reload();
           }}
         />

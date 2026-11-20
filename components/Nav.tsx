@@ -7,9 +7,8 @@ import { useSlider } from "@/lib/slide";
 
 const items = [
   { href: "/", label: "Home" },
-  { href: "/threads/", label: "Threads", also: ["/thread/"] },
+  { href: "/thoughts/", label: "Thoughts", also: ["/thought/", "/threads/", "/thread/", "/discarded/", "/review/", "/stack/"] },
   { href: "/new/", label: "New thought", plus: true, also: ["/write/"] },
-  { href: "/thoughts/", label: "Thoughts", also: ["/thought/", "/discarded/", "/review/", "/stack/"] },
   { href: "/collections/", label: "Collections", also: ["/interests/", "/interest/", "/collection/", "/import/"] },
 ];
 

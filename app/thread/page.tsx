@@ -10,9 +10,11 @@ import Dialog, { Choice } from "@/components/Dialog";
 import PickUpRow from "@/components/PickUpRow";
 import PickMany from "@/components/PickMany";
 import { preview } from "@/components/ThoughtCard";
-import { timeline } from "@/lib/threads";
+import { putInThread, timeline } from "@/lib/threads";
 import Topics from "@/components/Topics";
 import type { Thought } from "@/lib/types";
+import ThoughtMenu from "@/components/ThoughtMenu";
+import { useLongPress } from "@/lib/longpress";
 
 function ThreadView() {
   const { store } = useApp();
@@ -27,18 +29,19 @@ function ThreadView() {
       .filter((t) => t.finished && !here.has(t.id))
       .map((t) => ({ id: t.id, title: preview(t.body, 90), serif: true, sub: `${day(t.created_at, { weekday: false })}${t.thread_id && titles.get(t.thread_id) ? ` · in ${titles.get(t.thread_id)}` : ""}` }));
     const labels = [...new Set(threads.flatMap((x) => x.labels ?? []))].sort();
-    return { thread, entries, titles, elsewhere, labels, every: all.filter((t) => t.thread_id === id) };
+    return { thread, entries, titles, elsewhere, labels, all, every: all.filter((t) => t.thread_id === id) };
   }, [store, id]);
   const [asking, setAsking] = useState(false);
   const [keep, setKeep] = useState(true);
   const [editing, setEditing] = useState<null | { title: string; note: string; labels: string[] }>(null);
-  // linking a thought in: under one particular thought, or under the thread as a whole
-  const [linking, setLinking] = useState<null | { under: Thought | null }>(null);
+  const [linking, setLinking] = useState(false);
+  const [menu, setMenu] = useState<Thought | null>(null);
+  const [note, setNote] = useState("");
   const listRef = useRef<HTMLOListElement>(null);
 
   if (error) return <main className="screen no-nav"><p className="error">{error}</p></main>;
   if (!data) return <main className="screen no-nav" />;
-  const { thread, entries, titles, elsewhere, labels, every } = data;
+  const { thread, entries, titles, elsewhere, labels, all, every } = data;
   if (!thread || thread.discarded_at)
     return (
       <main className="screen no-nav">
@@ -46,10 +49,8 @@ function ThreadView() {
         <Link className="btn" href="/threads/">Back to threads</Link>
       </main>
     );
-  const own = entries.filter((e) => !e.link);
-  const n = own.length;
-  const linked = entries.length - n;
-  const first = own[0]?.thought;
+  const n = entries.length;
+  const first = entries[0]?.thought;
 
   const exportText = () => {
     const text =
@@ -110,51 +111,41 @@ function ThreadView() {
         </button>
         <span className="muted" style={{ fontSize: 13 }}>
           {n} {n === 1 ? "thought" : "thoughts"}
-          {linked ? ` · ${linked} linked` : ""}
           {first ? ` · started ${day(first.created_at, { weekday: false })}` : ""}
         </span>
       </div>
       <PickUpRow thoughts={every} onViewMore={() => listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} />
+      <div className="row" style={{ gap: 8 }}>
+        <Link href={`/write/?thread=${thread.id}`} className="btn sm ink grow" style={{ gap: 6 }}>
+          <Icon name="pen" size={16} /> Write a follow-up
+        </Link>
+        <button className="btn sm grow" style={{ gap: 6 }} onClick={() => setLinking(true)}>
+          <Icon name="plus" size={16} /> Add thoughts
+        </button>
+      </div>
+      {note && <span className="small muted" role="status">{note}</span>}
       <ol className="timeline" ref={listRef} style={{ scrollMarginTop: 16 }}>
-        {entries.map(({ thought: t, root, link, under }) => (
-          <li key={link?.id ?? t.id} className={under ? "under" : undefined}>
-            <span className={"tl-dot" + (root ? " root" : link ? " open" : "")} aria-hidden="true" />
-            <div className={"card stack" + (link ? " tl-branch" : "")} style={{ gap: 4, borderRadius: 10, position: "relative", ...(root ? { boxShadow: "3px 3px 0 var(--lilac)" } : {}) }}>
-              {root && <span className="tl-label">Started here</span>}
-              {link && (
-                <span className="row" style={{ gap: 6, alignItems: "center" }}>
-                  <span className="tl-label grow">Linked · from {t.thread_id && titles.get(t.thread_id) ? titles.get(t.thread_id) : "a thought on its own"}</span>
-                  <button className="icon-btn" style={{ border: 0, background: "transparent", margin: "-10px -10px -10px 0" }} aria-label="Take this link out" onClick={async () => (await store.unlink(link.id), reload())}>
-                    <Icon name="close" size={14} />
-                  </button>
-                </span>
-              )}
-              <Link href={`/thought/?id=${t.id}`} className="stack" style={{ gap: 4, textDecoration: "none" }}>
-                <span className="small muted">
-                  <strong style={{ color: "var(--ink)" }}>{day(t.created_at)}</strong> · {link ? "tap to open the original" : time(new Date(t.created_at))}
-                </span>
-                <span className="serif" style={{ fontSize: 17, lineHeight: 1.35, whiteSpace: "pre-wrap" }}>{link ? preview(t.body, 220) : t.body}</span>
-              </Link>
-              {!under && (
-                <button className="tl-linkhere" onClick={() => setLinking({ under: t })} aria-label={`Link a thought under the thought from ${day(t.created_at, { weekday: false })}`}>
-                  <Icon name="link" size={14} width={2} /> Link a thought under this
-                </button>
-              )}
-            </div>
-          </li>
+        {entries.map(({ thought: t, root, link }) => (
+          <TimelineCard
+            key={link?.id ?? t.id}
+            t={t}
+            root={root}
+            elsewhere={t.thread_id && t.thread_id !== thread.id ? titles.get(t.thread_id) : undefined}
+            onHold={() => setMenu(t)}
+            onRemove={
+              root
+                ? undefined
+                : async () => {
+                    if (link) await store.unlink(link.id);
+                    else await store.updateThought(t.id, { thread_id: null });
+                    setNote("Taken out of this thread. The thought itself is still in Thoughts.");
+                    reload();
+                  }
+            }
+          />
         ))}
-        <li className="add">
-          <span className="tl-dot open" aria-hidden="true" />
-          <div className="stack" style={{ gap: 6 }}>
-            <Link href={`/write/?thread=${thread.id}`} className="btn block dashed" style={{ fontWeight: 500, minHeight: 46 }}>
-              Add a follow-up
-            </Link>
-            <button className="link small" style={{ minHeight: 44 }} onClick={() => setLinking({ under: null })}>
-              Link a thought to the whole thread
-            </button>
-          </div>
-        </li>
       </ol>
+      {entries.length > 0 && <span className="small muted hold-hint">Press and hold a thought for more options.</span>}
       {editing && (
         <Dialog
           title="Edit thread"
@@ -177,20 +168,32 @@ function ThreadView() {
       )}
       {linking && (
         <PickMany
-          title={linking.under ? "Link a thought under this one" : "Link a thought here"}
-          intro={
-            linking.under
-              ? `It shows right under “${preview(linking.under.body, 60)}”. Nothing is copied, and the thought stays where it is.`
-              : "It shows here on its own little branch. Nothing is copied, and the thought stays where it is."
-          }
+          title="Add thoughts to this thread"
+          intro="Pick thoughts you already wrote. They stay where they are and show here too, in date order."
           items={elsewhere}
           find="Find a thought"
-          empty="No other thoughts to link yet."
-          confirm={(k) => `Link ${k} ${k === 1 ? "thought" : "thoughts"}`}
-          onClose={() => setLinking(null)}
+          empty="No other thoughts to add yet."
+          confirm={(k) => `Add ${k} ${k === 1 ? "thought" : "thoughts"}`}
+          onClose={() => setLinking(false)}
           onDone={async (ids) => {
-            for (const x of ids) await store.linkToThreads(x, [thread.id], linking.under?.id ?? null);
-            setLinking(null);
+            for (const x of ids) {
+              const t = all.find((y) => y.id === x);
+              if (t) await putInThread(store, t, thread.id);
+            }
+            setLinking(false);
+            setNote(`Added ${ids.length} ${ids.length === 1 ? "thought" : "thoughts"}.`);
+            reload();
+          }}
+        />
+      )}
+      {menu && (
+        <ThoughtMenu
+          store={store}
+          thought={menu}
+          onClose={() => setMenu(null)}
+          onDone={(msg) => {
+            setMenu(null);
+            setNote(msg);
             reload();
           }}
         />
@@ -220,6 +223,33 @@ function ThreadView() {
         </Dialog>
       )}
     </main>
+  );
+}
+
+/** one thought on the thread's line. Every thought looks the same, wherever else it also lives. */
+function TimelineCard({ t, root, elsewhere, onHold, onRemove }: { t: Thought; root?: boolean; elsewhere?: string; onHold: () => void; onRemove?: () => void }) {
+  const hold = useLongPress(onHold);
+  return (
+    <li>
+      <span className={"tl-dot" + (root ? " root" : "")} aria-hidden="true" />
+      <div className="card stack tl-card" style={{ gap: 4, borderRadius: 10, position: "relative", ...(root ? { boxShadow: "3px 3px 0 var(--lilac)" } : {}) }} {...hold}>
+        <span className="row" style={{ gap: 6, alignItems: "center" }}>
+          <span className="small muted grow">
+            {root && <span className="tl-label" style={{ color: "var(--ink)", marginRight: 6 }}>Started here</span>}
+            <strong style={{ color: "var(--ink)" }}>{day(t.created_at)}</strong> · {time(new Date(t.created_at))}
+          </span>
+          {onRemove && (
+            <button className="icon-btn" style={{ border: 0, background: "transparent", margin: "-10px -10px -10px 0" }} aria-label="Take it out of this thread" onClick={onRemove}>
+              <Icon name="close" size={14} />
+            </button>
+          )}
+        </span>
+        <Link href={`/thought/?id=${t.id}`} className="stack" style={{ gap: 4, textDecoration: "none", minHeight: 44 }}>
+          <span className="serif" style={{ fontSize: 17, lineHeight: 1.35, whiteSpace: "pre-wrap" }}>{t.body}</span>
+          {elsewhere && <span className="small muted">Also in “{elsewhere}”</span>}
+        </Link>
+      </div>
+    </li>
   );
 }
 

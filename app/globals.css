@@ -671,13 +671,6 @@ button.mood { min-height: 44px; padding: 0 12px; font-size: 12px; }
 
 /* thread timeline: a thought linked under another sits indented beneath it */
 /* the main line runs straight down past it; a short elbow tucks it in under its thought */
-.timeline li.under::before { top: -2px; }
-.timeline li.under > .card { margin-left: 24px; }
-.timeline li.under::after { content: ""; position: absolute; left: 7px; top: 26px; width: 40px; border-top: 1px dashed var(--ink); pointer-events: none; }
-.timeline li.under .tl-dot { visibility: hidden; }
-.timeline li.under > .card::before { content: ""; position: absolute; left: -5px; top: 21px; width: 9px; height: 9px; border-radius: 50%; border: 1px dashed var(--ink); background: var(--paper); }
-.tl-linkhere { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: -6px 0 -12px -2px; padding: 0 4px; background: none; border: 0; font: inherit; font-size: 12.5px; font-weight: 500; color: var(--muted); cursor: pointer; }
-.tl-linkhere:hover { color: var(--ink); }
 .label-chip { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; margin: -8px 0; text-decoration: none; color: var(--ink); }
 .label-chip > span { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 13px; border: 1px solid var(--ink); background: var(--blue); font-size: 12px; font-weight: 500; }
 
@@ -746,3 +739,14 @@ button.mood { min-height: 44px; padding: 0 12px; font-size: 12px; }
 @media (prefers-reduced-motion: reduce) { .menu-btn i { transition: none; } }
 /* overlays opened from the dark Home header must not inherit its white text */
 .drawer, .search-sheet { color: var(--ink); }
+
+/* press-and-hold menu on a thought */
+.quick-menu { gap: 10px; }
+.qm-row { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; border: 1px solid var(--ink); border-radius: 12px; background: var(--card); font: inherit; font-size: 15px; font-weight: 500; color: var(--ink); text-align: left; cursor: pointer; transition: transform 0.16s var(--ease-paper), background-color 0.2s ease; }
+.qm-row:active { transform: scale(0.98); background: var(--blue); }
+.qm-row.danger { background: color-mix(in srgb, var(--toss) 45%, var(--card)); }
+.thought-card, .tl-card { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.hold-hint { text-align: center; }
+.threads-intro { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px 6px; background: var(--blue); animation: paper-up 0.42s var(--ease-paper) both; }
+.threads-intro strong { font-size: 15px; font-weight: 600; }
+.nav { justify-content: space-around; }
