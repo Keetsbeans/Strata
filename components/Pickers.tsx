@@ -115,10 +115,10 @@ export function ThoughtPicker({ thoughts, title, sub, onPick, onClose }: { thoug
 }
 
 /** link a word in a thought to one of your collections or a saved film, book, song or article. Starts with a search on that word. */
-export function WordLinkPicker({ store, word, onPick, onClose }: { store: Store; word: string; onPick: (kind: "collection" | "interest", id: string) => void; onClose: () => void }) {
+export function WordLinkPicker({ store, word, onPick, onClose, whole }: { store: Store; word: string; onPick: (kind: "collection" | "interest", id: string) => void; onClose: () => void; whole?: boolean }) {
   const [cols, setCols] = useState<Collection[] | null>(null);
   const [items, setItems] = useState<Interest[] | null>(null);
-  const [q, setQ] = useState(word);
+  const [q, setQ] = useState(whole ? "" : word);
   useEffect(() => {
     store.collections().then(setCols);
     store.interests().then(setItems);
@@ -129,9 +129,9 @@ export function WordLinkPicker({ store, word, onPick, onClose }: { store: Store;
   const i = (items ?? []).filter((x) => hit(x.title + " " + x.creator)).slice(0, 30);
   const loaded = cols && items;
   return (
-    <Sheet label="Link a word" onClose={onClose}>
-      <h2>Link “{word}”</h2>
-      <p>Point it at a collection or something you saved. Tapping the word then opens it.</p>
+    <Sheet label={whole ? "Add to a collection" : "Link a word"} onClose={onClose}>
+      <h2>{whole ? "Add to a collection" : `Link “${word}”`}</h2>
+      <p>{whole ? "Pick a collection, or one film, book, song or link you saved. The thought stays in Thoughts and shows up there too, under Your thoughts." : "Point it at a collection or something you saved. Tapping the word then opens it."}</p>
       <input className="input" type="search" placeholder="Search collections and saved things" aria-label="Search collections and saved things" value={q} onChange={(e) => setQ(e.target.value)} />
       {loaded && c.length > 0 && (
         <div className="stack" style={{ gap: 8 }}>

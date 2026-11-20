@@ -162,16 +162,16 @@ function Thoughts() {
                   </button>
                 )}
                 {cardsOk && (
-                  <SlideSeg label="Show as" dep={showCards} style={{ padding: 2 }}>
+                  <span data-tip="views" style={{ display: "inline-flex" }}><SlideSeg label="Show as" dep={showCards} style={{ padding: 2 }}>
                     <button className="vs" aria-pressed={showCards} aria-label="Show as cards to flip through" onClick={() => pickView("cards")}><Icon name="cards" size={17} /></button>
                     <button className="vs" aria-pressed={!showCards} aria-label="Show as a list" onClick={() => pickView("list")}><Icon name="list" size={17} /></button>
-                  </SlideSeg>
+                  </SlideSeg></span>
                 )}
               </span>
             )}
           </div>
         )}
-        {note && <span className="small muted" role="status">{note}</span>}
+        {note && <Toast title={note} onDone={() => setNote("")} />}
         {showCards ? (
           list.length > 0 && (
             <ThoughtDeck
@@ -218,8 +218,11 @@ function Thoughts() {
         <Guide
           id="thoughts"
           steps={[
-            { at: "tabs", title: "Where your thoughts sit", text: "Unsorted holds new thoughts you haven't done anything with yet. Keep one, give it a topic, or add it to a thread and it's sorted. Threads and All are right next to it." },
-            { at: "menu", title: "That's it", text: "Threads are also in the menu, if you want a shortcut." },
+            { at: "tabs", title: "Four places", text: "Unsorted: new thoughts you haven't dealt with. Threads: ideas you follow over time. All: everything, newest first. Unfinished: drafts." },
+            { at: "deck", title: "Sort one card at a time", text: "Swipe right or tap Keep to keep it. Swipe left to discard. Swipe up if you're not sure yet. Kept thoughts leave Unsorted." },
+            { at: "pin", title: "Add it to a thread", text: "The pin puts a thought in a thread, which sorts it too. Press and hold any thought for more options." },
+            { at: "views", title: "Cards or a list", text: "Switch between flipping through cards and seeing a list. Each tab remembers your choice." },
+            { at: "menu", title: "Shortcuts", text: "Threads are also in the menu, along with the calendar and discarded thoughts." },
           ]}
         />
       )}

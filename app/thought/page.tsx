@@ -9,7 +9,7 @@ import Icon from "@/components/Icon";
 import Dialog from "@/components/Dialog";
 import Poster from "@/components/Poster";
 import PickMany from "@/components/PickMany";
-import { InterestPicker, WordLinkPicker } from "@/components/Pickers";
+import { WordLinkPicker } from "@/components/Pickers";
 import { cleanPick, splitLinks } from "@/lib/wordLinks";
 import { rootOf } from "@/lib/threads";
 import { details } from "@/lib/interests";
@@ -28,6 +28,7 @@ function ThoughtView() {
     const thread = t?.thread_id ? threads.find((x) => x.id === t.thread_id) ?? null : null;
     const isRoot = !!thread && rootOf(thread, all)?.id === t?.id;
     const about = t?.interest_id ? await store.interest(t.interest_id) : null;
+    const inCol = t?.collection_id ? cols.find((c) => c.id === t.collection_id) ?? null : null;
     const mine = links.filter((l) => l.thought_id === id);
     const others = threads
       .filter((x) => x.id !== t?.thread_id)
@@ -41,7 +42,7 @@ function ThoughtView() {
       ...(thread ? [{ id: thread.id, title: thread.title, n: count(thread.id), link: null as string | null }] : []),
       ...mine.map((l) => ({ id: l.thread_id, title: threads.find((x) => x.id === l.thread_id)?.title ?? "", n: count(l.thread_id), link: l.id as string | null })).filter((x) => x.title),
     ];
-    return { t, thread, isRoot, about, inThreads, others, targets };
+    return { t, thread, isRoot, about, inCol, inThreads, others, targets };
   }, [store, id]);
   const [versions, setVersions] = useState<{ id: string; body: string; created_at: string }[] | null>(null);
   const [asking, setAsking] = useState(false);
@@ -67,7 +68,7 @@ function ThoughtView() {
 
   if (error) return <main className="screen no-nav"><p className="error">{error}</p></main>;
   if (!data) return <main className="screen no-nav" />;
-  const { t, thread, isRoot, about, inThreads, others, targets } = data;
+  const { t, thread, isRoot, about, inCol, inThreads, others, targets } = data;
   if (!t || t.discarded_at)
     return (
       <main className="screen no-nav">
@@ -156,6 +157,21 @@ function ThoughtView() {
           ))}
         </div>
       )}
+      {inCol && (
+        <section className="stack" style={{ gap: 8 }}>
+          <h2 style={{ fontSize: 15 }}>In a collection</h2>
+          <div className="item-row" style={{ paddingRight: 6 }}>
+            <span className="thumb coll-thumb" aria-hidden="true" />
+            <Link className="grow" href={`/collection/?id=${inCol.id}`} style={{ textDecoration: "none", minHeight: 44, justifyContent: "center" }}>
+              <strong>{inCol.title}</strong>
+              <span className="sub">Collection</span>
+            </Link>
+            <button className="icon-btn" style={{ border: 0, background: "transparent" }} aria-label={`Take it out of ${inCol.title}`} onClick={async () => (await store.updateThought(t.id, { collection_id: null }), reload())}>
+              <Icon name="close" size={16} />
+            </button>
+          </div>
+        </section>
+      )}
       {about && (
         <section className="stack" style={{ gap: 8 }}>
           <h2 style={{ fontSize: 15 }}>About</h2>
@@ -196,20 +212,20 @@ function ThoughtView() {
           <span className="small muted">Not in a thread yet. Add it to one, or start one from it, to follow this idea over time.</span>
         )}
         <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-          <button className="btn sm" onClick={() => setSheet("link")}>
-            Add to a thread
+          <button className="btn sm ink" onClick={() => setSheet("link")}>
+            <Icon name="thread" size={16} /> Add to a thread
           </button>
           {!thread && (
-            <button className="btn sm" onClick={() => (setName(""), setSheet("start"))}>
+            <button className="btn sm lilac" onClick={() => (setName(""), setSheet("start"))}>
               Start a thread from this
             </button>
           )}
         </div>
       </section>
       {saved && <span className="small muted" role="status" style={{ textAlign: "center" }}>{saved}</span>}
-      {!about && (
-        <button className="btn sm block" onClick={() => setPinning(true)}>
-          Pin to a film, book or song
+      {!about && !inCol && (
+        <button className="btn sm block butter" onClick={() => setPinning(true)}>
+          Add to a collection
         </button>
       )}
       {picked && !wordSheet && (
@@ -258,11 +274,13 @@ function ThoughtView() {
         />
       )}
       {pinning && (
-        <InterestPicker
+        <WordLinkPicker
           store={store}
+          word=""
+          whole
           onClose={() => setPinning(false)}
-          onPick={async (iid) => {
-            await store.updateThought(t.id, { interest_id: iid });
+          onPick={async (kind, target) => {
+            await store.updateThought(t.id, kind === "collection" ? { collection_id: target } : { interest_id: target });
             setPinning(false);
             reload();
           }}

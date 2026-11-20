@@ -49,7 +49,7 @@ export default function Collections() {
           </Link>
         )}
         {data && (
-          <Link href="/interests/import/" className="row small" style={{ gap: 8, alignItems: "center", minHeight: 44, marginTop: -8, fontWeight: 600 }}>
+          <Link href="/interests/import/" data-tip="import" className="row small" style={{ gap: 8, alignItems: "center", minHeight: 44, marginTop: -8, fontWeight: 600 }}>
             <Icon name="download" size={16} /> Import from Letterboxd or Goodreads
           </Link>
         )}
@@ -83,10 +83,12 @@ export default function Collections() {
         <Guide
           id="collections"
           steps={[
-            { at: "saved", title: "Everything you saved", text: "Every film, book, song and link you've saved, whether or not it's in a collection." },
+            { at: "saved", title: "Everything you saved", text: "Every film, book, song and link you've saved lives here, whether or not it's in a collection. Filter by type, mood or genre." },
+            { at: "import", title: "Bring in what you've logged", text: "Import your films from Letterboxd or books from Goodreads. They arrive in Inbox for you to sort." },
             data.cols.length
-              ? { at: "boards", title: "Collections are boards", text: "Group things that belong together. Open one to see it as tiles, or as a board you can arrange and decorate." }
+              ? { at: "boards", title: "Your collections", text: "Each one groups things that belong together. Open one to see it as tiles, or as a board you can arrange and decorate." }
               : { at: "new-col", title: "Make a collection", text: "Group things that belong together, like “For a rainy Sunday”." },
+            ...(data.cols.length ? [{ at: "new-col", title: "Start a new one", text: "Name it, add a line about it, then add films, books, songs or links." }] : []),
           ]}
         />
       )}

@@ -9,7 +9,6 @@ import Mascot from "@/components/Mascot";
 import Icon from "@/components/Icon";
 import Logo from "@/components/Logo";
 import { preview } from "@/components/ThoughtCard";
-import Poster from "@/components/Poster";
 import Folder from "@/components/Folder";
 import TopIcons from "@/components/TopIcons";
 import { comingBack } from "@/lib/inbox";
@@ -17,6 +16,7 @@ import { introSeen, markIntro } from "@/lib/intro";
 import Onboarding from "@/components/Onboarding";
 import { isUnsorted } from "@/lib/threads";
 import Guide from "@/components/Guide";
+import BoardCover from "@/components/BoardCover";
 
 function greeting(d: Date) {
   const h = d.getHours();
@@ -60,6 +60,7 @@ export default function Home() {
   const { thoughts, threads, interests, collections, links, threadLinks } = data;
   const back = comingBack(thoughts, interests, now);
   const recentItems = interests.slice(0, 6);
+  const byId = new Map(interests.map((i) => [i.id, i]));
   const finished = thoughts.filter((t) => t.finished);
   const drafts = thoughts.filter((t) => !t.finished).sort((a, b) => b.updated_at.localeCompare(a.updated_at));
   const unsorted = finished.filter((t) => isUnsorted(t, threadLinks));
@@ -67,7 +68,6 @@ export default function Home() {
   const last = [...thoughts].sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
   const todayCount = finished.filter((t) => sameDay(new Date(t.created_at), now)).length;
   const first = thoughts.length === 0;
-  const pinCount = (id: string) => finished.filter((t) => t.interest_id === id).length;
   const latestOf = (id: string) => finished.filter((t) => t.thread_id === id)[0];
 
   return (
@@ -93,8 +93,12 @@ export default function Home() {
             </>
           )}
         </h1>
-        <Link className="btn lilac block new-big" href="/new/" data-tip="new">
-          <Icon name="plus" size={20} /> New thought
+        <Link className="new-note" href="/new/" data-tip="new" aria-label="Write a new thought">
+          <span className="stack grow" style={{ gap: 2, minWidth: 0 }}>
+            <span className="new-note-when">{stamp(new Date().toISOString())}</span>
+            <span className="new-note-line">{first ? "Write your first thought…" : "Write a new thought…"}</span>
+          </span>
+          <span className="new-note-plus" aria-hidden="true"><Icon name="plus" size={20} width={2.4} /></span>
         </Link>
       </header>
 
@@ -114,7 +118,7 @@ export default function Home() {
         ) : (
           <>
             {last && !hideLast && (
-              <div className="card has-mascot" style={{ padding: "16px 18px" }}>
+              <div className="card has-mascot" style={{ padding: "16px 18px" }} data-tip="pickup">
                 <Mascot size={62} className="card-mascot" arms="wave" eyes={last.finished ? "happy" : "look"} mouth={last.finished ? "smile" : "o"} />
                 <div className="between">
                   <strong style={{ fontWeight: 600 }}>{last.finished ? "Pick up where you left off" : "You left this unfinished"}</strong>
@@ -136,7 +140,7 @@ export default function Home() {
           </>
         )}
 
-        <section className="stack week" style={{ gap: 8 }} aria-label="This week">
+        <section className="stack week" style={{ gap: 8 }} aria-label="This week" data-tip="week">
           <div className="between">
             <Link href="/calendar/" className="month-link">
               <Icon name="calendar" size={16} /> {MONTHS_LONG[days[3].getMonth()]} {days[3].getFullYear()}
@@ -216,16 +220,15 @@ export default function Home() {
           </section>
         )}
 
-        <section className="stack" style={{ gap: 10 }}>
+        <section className="stack" style={{ gap: 10 }} data-tip="folders">
           <h2 style={{ fontSize: 17 }}>Your folders</h2>
           {first && <span className="small muted">These fill up as you go. Nothing needs sorting today.</span>}
           <div className="folders">
-            <Folder href="/thoughts/?filter=unsorted" label="Unsorted" count={unsorted.length} icon="flip" colour="var(--butter)" sheet="var(--blue)" />
-            <Folder href="/stack/" label="Unfinished" count={drafts.length} icon="unfinished" colour="var(--blue)" sheet="var(--lilac)" />
-            <Folder href="/interests/" label="Saved" count={interests.length} icon="interests" colour="var(--lilac)" sheet="var(--butter)" />
-            <Folder href="/collections/" label="Collections" count={collections.length} icon="collections" colour="var(--butter)" sheet="var(--lilac)" />
-            <Folder href="/threads/" label="Threads" count={threads.length} icon="threads" colour="var(--card)" sheet="var(--lilac)" />
-            <Folder href="/inbox/" label="Inbox" count={back.yearAgo.length + back.waiting.length + links.length} icon="inbox" colour="var(--card)" sheet="var(--butter)" />
+            {/* colour means something: butter = waiting on you, blue = half-written, lilac = growing over time */}
+            <Folder href="/thoughts/?filter=unsorted" label="Unsorted" count={unsorted.length} icon="flip" colour="var(--butter)" sheet="var(--card)" />
+            <Folder href="/stack/" label="Unfinished" count={drafts.length} icon="unfinished" colour="var(--blue)" sheet="var(--card)" />
+            <Folder href="/threads/" label="Threads" count={threads.length} icon="threads" colour="var(--lilac)" sheet="var(--card)" />
+            <Folder href="/inbox/" label="Inbox" count={back.yearAgo.length + back.waiting.length + links.length} icon="inbox" colour="var(--butter)" sheet="var(--card)" />
           </div>
         </section>
 
@@ -237,24 +240,29 @@ export default function Home() {
           </Link>
         )}
 
-        {recentItems.length > 0 && (
-          <section className="stack" style={{ gap: 10 }}>
+        {(collections.length > 0 || recentItems.length > 0) && (
+          <section className="stack" style={{ gap: 10 }} data-tip="home-cols">
             <div className="between">
-              <h2 style={{ fontSize: 17 }}>Recently saved films, books and music</h2>
-              <Link href="/interests/" className="link" style={{ fontSize: 13 }}>
+              <h2 style={{ fontSize: 17 }}>Collections</h2>
+              <Link href="/collections/" className="link" style={{ fontSize: 13 }}>
                 See all
               </Link>
             </div>
-            <p className="small muted" style={{ margin: "-4px 0 0" }}>The last things you added to Saved. Tap one to see your thoughts on it.</p>
-            <div className="pickup" style={{ gap: 12 }}>
-              {recentItems.map((i) => (
-                <Link key={i.id} href={`/interest/?id=${i.id}`} className="shelf-item" style={{ flex: "0 0 104px" }}>
-                  <Poster src={i.image_url} title={i.title} kind={i.kind} />
-                  <span className="small" style={{ fontWeight: 600, lineHeight: 1.2 }}>{i.title}</span>
-                  <span className="small muted">{pinCount(i.id) ? `${pinCount(i.id)} ${pinCount(i.id) === 1 ? "thought" : "thoughts"}` : "No thoughts yet"}</span>
-                </Link>
-              ))}
-            </div>
+            {collections.length > 0 ? (
+              <div className="pickup" style={{ gap: 12 }}>
+                {collections.slice(0, 6).map((c) => (
+                  <Link key={c.id} href={`/collection/?id=${c.id}`} className="board-card" style={{ flex: "0 0 132px" }}>
+                    <BoardCover c={c} interests={byId} />
+                    <strong style={{ fontSize: 14 }}>{c.title}</strong>
+                    <span className="small muted" style={{ marginTop: -4 }}>{c.items.length} {c.items.length === 1 ? "thing" : "things"}</span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <Link href="/collections/" className="card small" style={{ borderStyle: "dashed", background: "transparent" }}>
+                You&apos;ve saved {interests.length} {interests.length === 1 ? "thing" : "things"}. Group them into a collection, like “For a rainy Sunday”.
+              </Link>
+            )}
           </section>
         )}
 
@@ -277,11 +285,16 @@ export default function Home() {
         id="home"
         wait={900}
         steps={[
-          { at: "new", title: "Start with a thought", text: "Anything on your mind, big or small. Every thought keeps its date and time." },
+          { at: "new", title: "Write a thought", text: "Tap this note to write whatever's on your mind. Type it or say it out loud. Every thought keeps its date and time." },
+          { at: "pickup", title: "Pick up where you left off", text: "The last thought you worked on waits here, so you can carry on or finish a draft." },
+          { at: "week", title: "Your week", text: "A dot marks each day you wrote. Tap a day to see what you wrote then, swipe for earlier weeks, or tap the month for the full calendar." },
           threads.length
-            ? { at: "threads", title: "Your threads", text: "A thread follows one idea over time. Add a thought to one whenever the idea comes back." }
-            : { at: "nav-thoughts", title: "Threads live in Thoughts", text: "When an idea keeps coming back, start a thread for it from any thought. You'll find them under Thoughts." },
-          { at: "menu", title: "The menu", text: "Threads, your calendar, imports and settings are all in here." },
+            ? { at: "threads", title: "Your threads", text: "A thread follows one idea over time. When the idea comes back, add the new thought to its thread." }
+            : { at: "folders", title: "Threads", text: "When an idea keeps coming back, start a thread from any thought and add follow-ups as they come." },
+          { at: "folders", title: "Your folders", text: "Unsorted holds new thoughts you haven't dealt with. Unfinished holds drafts. Threads and Inbox are one tap away." },
+          { at: "home-cols", title: "Collections", text: "Films, books, songs and links you love, grouped into boards you can arrange and decorate." },
+          { at: "nav", title: "Getting around", text: "Home, all your Thoughts, the + for a new thought, and Collections. These stay at the bottom of every page." },
+          { at: "menu", title: "The menu", text: "Threads, your calendar, imports, discarded thoughts and settings all live in here." },
         ]}
       />
       <Nav />

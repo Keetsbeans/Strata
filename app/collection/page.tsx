@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useApp } from "../providers";
 import { useData } from "@/lib/useData";
@@ -16,6 +16,7 @@ import Nav from "@/components/Nav";
 import { CollectionForm, contents } from "@/components/CollectionBits";
 import Safe from "@/components/Safe";
 import Guide from "@/components/Guide";
+import { day } from "@/lib/dates";
 import Board, { STICKERS, gridSpot } from "@/components/Board";
 import type { Decor } from "@/lib/types";
 import { FilterBar, NO_FILTERS, SavedRow, SavedTile, matches, type Filters } from "@/components/Saved";
@@ -25,8 +26,8 @@ function CollectionView() {
   const router = useRouter();
   const id = useSearchParams().get("id") || "";
   const { data, error, reload, setData } = useData(async () => {
-    const [c, interests] = await Promise.all([store.collection(id), store.interests()]);
-    return { c, interests: new Map(interests.map((i) => [i.id, i])), allInterests: interests };
+    const [c, interests, thoughts] = await Promise.all([store.collection(id), store.interests(), store.thoughts()]);
+    return { c, interests: new Map(interests.map((i) => [i.id, i])), allInterests: interests, mine: thoughts.filter((t) => t.collection_id === id && t.finished) };
   }, [store, id]);
   const [mode, setMode] = useState<null | "edit" | "add" | "delete">(null);
   const [removing, setRemoving] = useState(false);
@@ -51,6 +52,11 @@ function CollectionView() {
     } catch {}
   };
   const things = data?.c ? data.c.items.map((x) => ({ x, it: data.interests.get(x.interest_id ?? "") })).filter((e) => !!e.it) : [];
+  // the same list object until the data really changes, so the board never resets mid-gesture
+  const boardThings = useMemo(
+    () => (data?.c ? data.c.items.flatMap((x) => { const it = data.interests.get(x.interest_id ?? ""); return it ? [{ x, it }] : []; }) : []),
+    [data],
+  );
   usePictureFill(store, things.map((e) => e.it!), (it) => setData((d) => d && { ...d, interests: new Map(d.interests).set(it.id, it) }));
 
   if (error) return <main className="screen"><p className="error">{error}</p><Nav /></main>;
@@ -106,43 +112,6 @@ function CollectionView() {
             <button aria-pressed={view === "board"} onClick={() => pickView("board")}>Board</button>
           </SlideSeg>
         )}
-        {view === "board" && things.length > 0 && (
-          <>
-            <Guide
-              id="board"
-              steps={[
-                { at: "board", title: "Your board", text: "Pinch to zoom and drag to look around. Press and hold a poster to move it." },
-                { at: "board-tools", title: "Make it yours", text: "Add stickers and labels, tidy everything back into rows, or jump back to the start if you get lost." },
-              ]}
-            />
-            <Safe label="board" onReset={reload}>
-              <Board
-                store={store}
-                collectionId={c.id}
-                things={things.filter((e) => e.it).map((e) => ({ x: e.x, it: e.it! }))}
-                decor={decor}
-                onDecor={setDecor}
-                center={center}
-                tools={
-                  <>
-                    <button className="pill" onClick={() => setDrawer("stickers")}><span>Stickers</span></button>
-                    <button className="pill" onClick={() => setDrawer("labels")}><span>Label</span></button>
-                    <button
-                      className="pill"
-                      onClick={async () => {
-                        await Promise.all(things.map((e, i) => store.placeItem(e.x.id, gridSpot(i))));
-                        reload();
-                      }}
-                    >
-                      <span>Tidy up</span>
-                    </button>
-                  </>
-                }
-              />
-            </Safe>
-            <span className="small muted" style={{ textAlign: "center", marginTop: -8 }}>Drag to look around · pinch to zoom · long-press to move</span>
-          </>
-        )}
         {view === "tiles" && things.length > 1 && <FilterBar items={things.map((e) => e.it!)} value={f} onChange={setF} moods={moods} />}
         {view === "tiles" && things.length > 0 && (
           <div className="between" style={{ marginTop: -6 }}>
@@ -195,6 +164,17 @@ function CollectionView() {
             <button className="btn sm" onClick={() => setF(NO_FILTERS)}>Show all</button>
           </div>
         )}
+        {view === "tiles" && data.mine.length > 0 && (
+          <section className="stack" style={{ gap: 8 }}>
+            <h2 style={{ fontSize: 15 }}>Your thoughts</h2>
+            {data.mine.map((t) => (
+              <Link key={t.id} href={`/thought/?id=${t.id}`} className="card" style={{ textDecoration: "none", padding: "12px 16px" }}>
+                <span className="small muted">{day(t.created_at, { weekday: false })}</span>
+                <p className="serif clamp2" style={{ margin: "2px 0 0", fontSize: 16, lineHeight: 1.35 }}>{t.body}</p>
+              </Link>
+            ))}
+          </section>
+        )}
         {things.length === 0 && (
           <div className="empty">
             <h2>An empty collection</h2>
@@ -203,7 +183,51 @@ function CollectionView() {
           </div>
         )}
       </main>
-      <Nav />
+      {view === "board" && things.length > 0 && (
+        <div className="board-screen" role="dialog" aria-label={`${c.title}, as a board`}>
+          <header className="board-head">
+            <button className="icon-btn round" aria-label="Back to tiles" data-tip="board-back" onClick={() => pickView("tiles")}>
+              <Icon name="back" />
+            </button>
+            <strong className="board-title">{c.title}</strong>
+            <button className="btn sm" onClick={() => (setQ(""), setMode("add"))}>Add</button>
+          </header>
+          <Safe label="board" onReset={reload}>
+            <Board
+              store={store}
+              collectionId={c.id}
+              things={boardThings}
+              decor={decor}
+              onDecor={setDecor}
+              center={center}
+              tools={
+                <>
+                  <button onClick={() => setDrawer("stickers")}>Stickers</button>
+                  <button onClick={() => setDrawer("labels")}>Label</button>
+                  <button
+                    onClick={async () => {
+                      await Promise.all(things.map((e, i) => store.placeItem(e.x.id, gridSpot(i))));
+                      reload();
+                    }}
+                  >
+                    Tidy up
+                  </button>
+                </>
+              }
+            />
+          </Safe>
+          <Guide
+            id="board"
+            steps={[
+              { at: "board", title: "Your board", text: "Drag with one finger to look around, and pinch to zoom in or out." },
+              { at: "board", title: "Move things around", text: "Press and hold a poster or sticker until it lifts, then drag it where you like. Tap a poster to open it." },
+              { at: "board-tools", title: "Decorate it", text: "Stickers and Label add little extras. Tidy up puts everything back in rows. Back to start brings the view home if you get lost." },
+              { at: "board-back", title: "Back to tiles", text: "This arrow takes you back to the plain grid. The board remembers where you put everything." },
+            ]}
+          />
+        </div>
+      )}
+      {view !== "board" && <Nav />}
 
       {drawer && (
         <>
