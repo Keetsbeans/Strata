@@ -123,7 +123,7 @@ function ThreadView() {
               {root && <span className="tl-label">Started here</span>}
               {link && (
                 <span className="row" style={{ gap: 6, alignItems: "center" }}>
-                  <span className="tl-label grow">{under ? "Linked under the thought above" : "Linked"} · from {t.thread_id && titles.get(t.thread_id) ? titles.get(t.thread_id) : "a thought on its own"}</span>
+                  <span className="tl-label grow">Linked · from {t.thread_id && titles.get(t.thread_id) ? titles.get(t.thread_id) : "a thought on its own"}</span>
                   <button className="icon-btn" style={{ border: 0, background: "transparent", margin: "-10px -10px -10px 0" }} aria-label="Take this link out" onClick={async () => (await store.unlink(link.id), reload())}>
                     <Icon name="close" size={14} />
                   </button>
