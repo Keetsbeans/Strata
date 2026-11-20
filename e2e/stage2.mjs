@@ -67,6 +67,8 @@ await ctx.addInitScript(() => {
     localStorage.setItem("strata:mode", "local");
     localStorage.setItem("strata:voice", "local");
     localStorage.setItem("strata:onboarded", "1");
+    // page guides are tested on their own, further down
+    localStorage.setItem("strata:tips-seen", JSON.stringify(["home", "thoughts", "collections", "board"]));
     sessionStorage.setItem("seeded", "1");
   }
 });
@@ -209,7 +211,7 @@ try {
   await page.getByRole("button", { name: "Tiles" }).click();
 
   console.log("Pin an existing thought from its own page");
-  await go("/thoughts/?view=list");
+  await go("/thoughts/?filter=all");
   await page.getByText("A website is closer to a room than a poster.").click();
   await page.getByRole("button", { name: "Pin to a film, book or song" }).click();
   await page.getByRole("button", { name: /Columbus/ }).click();
@@ -248,7 +250,7 @@ try {
   await shot("05a-hold-menu");
   await page.getByRole("dialog", { name: "Thought options" }).getByRole("button", { name: "Cancel" }).click();
   await shot("05a-thread");
-  await go("/thoughts/?view=list");
+  await go("/thoughts/?filter=all");
   await page.getByText("Why do people perform busyness").click();
   await page.getByRole("button", { name: "Start a thread from this" }).click();
   await page.getByLabel("Thread name").fill("On busyness");
@@ -259,7 +261,7 @@ try {
   await page.getByRole("checkbox", { name: /I remember songs/ }).click();
   await page.getByRole("button", { name: "Add 1 thought" }).click();
   ok(await seen(page.locator(".tl-card", { hasText: "I remember songs" })), "Add thoughts puts one you already wrote in the thread");
-  await go("/thoughts/?view=list");
+  await go("/thoughts/?filter=all");
   await page.locator(".thought-card", { hasText: "I remember songs by where I was standing." }).click();
   await page.getByRole("region", { name: "Threads" }).getByRole("button", { name: "Add to a thread" }).click();
   await page.getByRole("checkbox", { name: /On routine and freedom/ }).click();
@@ -270,6 +272,10 @@ try {
 
   console.log("Thoughts screen: tabs, list or cards, pin to a thread");
   await go("/thoughts/");
+  ok(await seen(page.getByRole("tab", { name: /Unsorted/, selected: true })), "Thoughts opens on Unsorted while anything is waiting");
+  const tabNames = await page.getByRole("tab").evaluateAll((els) => els.map((e) => e.textContent.replace(/\d+/g, "").trim()));
+  ok(tabNames.join(",") === "Unsorted,Threads,All,Unfinished", "tabs read Unsorted, Threads, All, Unfinished: " + tabNames.join(","));
+  ok(!(await page.locator(".deck-front .ruled-text", { hasText: "My best mornings" }).count()) && !(await page.getByText("My best mornings").count()), "a thought in a thread isn't unsorted");
   ok(await seen(page.locator(".guide-layer")), "the first time you flip through, a guide shows each swipe");
   await page.waitForTimeout(700);
   await shot("05c0-swipe-guide");
@@ -285,14 +291,15 @@ try {
   await page.locator("header").getByRole("button", { name: "Menu" }).click();
   const drawer = page.getByRole("dialog", { name: "Menu" });
   ok(await seen(drawer.getByText("Time capsules")), "the menu opens a drawer, with a place for time capsules");
-  ok(!(await drawer.getByRole("link", { name: /Threads/ }).count()), "Threads lives in Thoughts only, not twice");
+  ok(await seen(drawer.getByRole("link", { name: /Threads/ })), "Threads is in the menu too");
   ok(await seen(page.locator("header").getByRole("button", { name: "Close the menu" })), "the menu button turns into a close cross");
   await page.waitForTimeout(650);
   await shot("05c2-drawer");
   await page.locator("header").getByRole("button", { name: "Close the menu" }).click();
   await drawer.waitFor({ state: "detached" });
   ok(true, "and closes the drawer again");
-  await go("/thoughts/");
+  await go("/thoughts/?filter=all");
+  ok(await seen(page.locator(".thought-card").first()), "All opens as a list");
   ok(await seen(page.locator("header").getByRole("link", { name: /^Inbox/ })), "Inbox is an icon at the top right");
   await page.locator("header").getByRole("button", { name: "Search" }).click();
   ok(await seen(page.locator(".search-sheet")), "search slides in over the screen");
@@ -300,7 +307,6 @@ try {
   await shot("05c1-search-sheet");
   await page.keyboard.press("Escape");
   await page.locator(".search-sheet").waitFor({ state: "detached" });
-  await page.getByRole("button", { name: "Show as a list" }).click();
   const pinCard = page.locator(".thought-wrap", { hasText: "My best mornings" });
   await pinCard.getByRole("button", { name: /thread/ }).click();
   ok(await seen(page.getByRole("heading", { name: /Add it to a thread/ })), "the pin asks which thread");
@@ -514,7 +520,7 @@ try {
   await page.getByRole("button", { name: "Remove from Saved" }).click();
   await page.getByRole("button", { name: "Remove it" }).click();
   await page.waitForURL(/\/interests\//);
-  await go("/thoughts/");
+  await go("/thoughts/?filter=all");
   ok(await seen(page.getByText("The last scene keeps playing in my head.")), "thought stayed after its film was removed");
 
   console.log("Opening screens, calendar, unfinished stack");
@@ -594,7 +600,7 @@ try {
 
   console.log("Swipe and mascot");
   await go("/review/");
-  await page.waitForURL(/view=cards/);
+  await page.waitForURL(/filter=unsorted/);
   await page.locator(".deck-front").waitFor();
   const before = await page.locator(".swipe-help").innerText();
   const box = await page.locator(".deck-front").boundingBox();
@@ -607,7 +613,8 @@ try {
   await shot("24-swipe");
   await page.mouse.up();
   await page.waitForFunction((b) => document.querySelector(".swipe-help")?.textContent !== b, before, { timeout: 4000 });
-  ok(await seen(page.getByText("Kept. It stays in All, and leaves Unsorted.")), "swiping right kept the card, moved on, and says where it went");
+  ok(await seen(page.getByText("Kept, and sorted.")), "swiping right kept the card, moved on, and says it's sorted");
+  ok(await seen(page.locator(".swipe-flash").getByRole("button", { name: "Add it to a thread?" })), "and offers a thread, without forcing one");
   const upText = (await page.locator(".deck-front .ruled-text").innerText()).slice(0, 20);
   const ub = await page.locator(".deck-front").boundingBox();
   await page.mouse.move(ub.x + ub.width / 2, ub.y + ub.height / 2);
@@ -616,12 +623,62 @@ try {
   ok(await seen(page.locator(".swipe-hint.up")), "dragging up shows Not sure");
   await page.mouse.up();
   await page.waitForTimeout(500);
-  ok(!(await page.locator(".deck-front .ruled-text").innerText()).startsWith(upText), "swiping up moves on");
+  ok((await page.getByText("That's the pile").count()) > 0 || !(await page.locator(".deck-front .ruled-text").innerText()).startsWith(upText), "swiping up moves on");
   const stillUnsorted = await page.evaluate((t) => JSON.parse(localStorage.getItem("strata:try:v1")).thoughts.some((x) => x.body.startsWith(t) && !x.kept && !x.discarded_at), upText);
   ok(stillUnsorted, "and leaves that thought unsorted");
   ok((await page.locator(".mascot.live").count()) > 0, "mascot moves on screen");
   await go("/");
   ok(await seen(page.locator(".has-mascot .card-mascot")), "mascot waves from the Pick up card on Home");
+
+  console.log("Page guides and Show tips again");
+  await page.evaluate(() => localStorage.removeItem("strata:tips-seen"));
+  await go("/");
+  await page.locator(".tip-card").waitFor();
+  ok(await seen(page.locator(".tip-card").getByText("Start with a thought")), "Home's guide lights up New thought first");
+  await page.waitForTimeout(450);
+  await shot("30-guide-home-1");
+  await page.locator(".tip-card").getByRole("button", { name: "Next" }).click();
+  ok(await seen(page.locator(".tip-card").getByText("Your threads")), "then points out Your threads");
+  await page.waitForTimeout(450);
+  await shot("30-guide-home-2");
+  await page.locator(".tip-card").getByRole("button", { name: "Next" }).click();
+  ok(await seen(page.locator(".tip-path").getByText("Show tips again")), "the last step shows the way back: Menu, Settings, Show tips again");
+  await page.waitForTimeout(450);
+  await shot("30-guide-home-3");
+  await page.locator(".tip-card").getByRole("button", { name: "Got it" }).click();
+  await go("/");
+  await page.waitForTimeout(1200);
+  ok(!(await page.locator(".tip-card").count()), "and it shows only once");
+  await go("/collections/");
+  await page.locator(".tip-card").waitFor();
+  await page.waitForTimeout(450);
+  await shot("31-guide-collections");
+  await page.locator(".tip-card").getByRole("button", { name: "Skip" }).click();
+  await go("/collection/?id=c1");
+  await page.getByRole("button", { name: "Board" }).click();
+  await page.locator(".tip-card").waitFor();
+  await page.waitForTimeout(450);
+  await shot("32-guide-board");
+  await page.locator(".tip-card").getByRole("button", { name: "Skip" }).click();
+  await go("/settings/");
+  const tipSwitch = page.getByRole("switch", { name: "Show tips again" });
+  ok((await tipSwitch.getAttribute("aria-checked")) === "true", "Settings has Show tips again, on while some guides are still to come");
+  await tipSwitch.click();
+  await tipSwitch.click();
+  ok((await tipSwitch.getAttribute("aria-checked")) === "true", "switching it back on resets every guide");
+  await go("/");
+  ok(await seen(page.locator(".tip-card")), "so Home's guide shows again");
+  await page.evaluate(() => localStorage.setItem("strata:tips-seen", JSON.stringify(["home", "thoughts", "collections", "board"])));
+
+  console.log("Thoughts opens on Threads once nothing is unsorted");
+  await page.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem("strata:try:v1"));
+    db.thoughts.forEach((t) => (t.kept = true));
+    localStorage.setItem("strata:try:v1", JSON.stringify(db));
+  });
+  await go("/thoughts/");
+  await page.waitForURL(/\/threads\//);
+  ok(await seen(page.getByRole("tab", { name: "Threads", selected: true })), "with nothing to sort, Thoughts opens on Threads");
 
   console.log("Labels and tap sizes");
   const audit = async () =>

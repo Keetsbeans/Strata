@@ -14,6 +14,8 @@ import Poster from "@/components/Poster";
 import Dialog from "@/components/Dialog";
 import Nav from "@/components/Nav";
 import { CollectionForm, contents } from "@/components/CollectionBits";
+import Safe from "@/components/Safe";
+import Guide from "@/components/Guide";
 import Board, { STICKERS, gridSpot } from "@/components/Board";
 import type { Decor } from "@/lib/types";
 import { FilterBar, NO_FILTERS, SavedRow, SavedTile, matches, type Filters } from "@/components/Saved";
@@ -106,21 +108,39 @@ function CollectionView() {
         )}
         {view === "board" && things.length > 0 && (
           <>
-            <Board store={store} collectionId={c.id} things={things.map((e) => ({ x: e.x, it: e.it! }))} decor={decor} onDecor={setDecor} center={center} />
+            <Guide
+              id="board"
+              steps={[
+                { at: "board", title: "Your board", text: "Pinch to zoom and drag to look around. Press and hold a poster to move it." },
+                { at: "board-tools", title: "Make it yours", text: "Add stickers and labels, tidy everything back into rows, or jump back to the start if you get lost." },
+              ]}
+            />
+            <Safe label="board" onReset={reload}>
+              <Board
+                store={store}
+                collectionId={c.id}
+                things={things.filter((e) => e.it).map((e) => ({ x: e.x, it: e.it! }))}
+                decor={decor}
+                onDecor={setDecor}
+                center={center}
+                tools={
+                  <>
+                    <button className="pill" onClick={() => setDrawer("stickers")}><span>Stickers</span></button>
+                    <button className="pill" onClick={() => setDrawer("labels")}><span>Label</span></button>
+                    <button
+                      className="pill"
+                      onClick={async () => {
+                        await Promise.all(things.map((e, i) => store.placeItem(e.x.id, gridSpot(i))));
+                        reload();
+                      }}
+                    >
+                      <span>Tidy up</span>
+                    </button>
+                  </>
+                }
+              />
+            </Safe>
             <span className="small muted" style={{ textAlign: "center", marginTop: -8 }}>Drag to look around · pinch to zoom · long-press to move</span>
-            <div className="row" style={{ justifyContent: "center", gap: 6, marginTop: -10 }}>
-              <button className="pill" onClick={() => setDrawer("stickers")}><span>Stickers</span></button>
-              <button className="pill" onClick={() => setDrawer("labels")}><span>Label</span></button>
-              <button
-                className="pill"
-                onClick={async () => {
-                  await Promise.all(things.map((e, i) => store.placeItem(e.x.id, gridSpot(i))));
-                  reload();
-                }}
-              >
-                <span>Tidy up</span>
-              </button>
-            </div>
           </>
         )}
         {view === "tiles" && things.length > 1 && <FilterBar items={things.map((e) => e.it!)} value={f} onChange={setF} moods={moods} />}

@@ -8,6 +8,7 @@ import Nav from "@/components/Nav";
 import Mascot from "@/components/Mascot";
 import Icon from "@/components/Icon";
 import TopIcons from "@/components/TopIcons";
+import Guide from "@/components/Guide";
 import BoardCover from "@/components/BoardCover";
 import { CollectionForm, contents } from "@/components/CollectionBits";
 
@@ -28,7 +29,7 @@ export default function Collections() {
           <h1 className="h-page">Collections</h1>
           <span className="row" style={{ gap: 2 }}>
             <TopIcons />
-            <button className="new-pill" onClick={() => setMaking(true)} aria-label="New collection">
+            <button className="new-pill" onClick={() => setMaking(true)} aria-label="New collection" data-tip="new-col">
               <span><Icon name="plus" size={15} width={2.4} /> New</span>
             </button>
           </span>
@@ -36,7 +37,7 @@ export default function Collections() {
         <p className="muted" style={{ margin: "-6px 0 0", fontSize: 14 }}>Films, books, music and links you like, kept together. Your thoughts stay in Thoughts.</p>
         {error && <p className="error">{error}</p>}
         {data && (
-          <Link href="/interests/" className="card saved-bar">
+          <Link href="/interests/" className="card saved-bar" data-tip="saved">
             <span className="grow stack" style={{ gap: 2 }}>
               <strong style={{ fontWeight: 600, fontSize: 15 }}>Everything you saved</strong>
               <span className="small muted">
@@ -53,7 +54,7 @@ export default function Collections() {
           </Link>
         )}
         {data && data.cols.length > 0 && (
-          <div className="boards">
+          <div className="boards" data-tip="boards">
             {data.cols.map((c) => (
               <Link key={c.id} href={`/collection/?id=${c.id}`} className="board-card">
                 <BoardCover c={c} interests={data.interests} />
@@ -78,6 +79,17 @@ export default function Collections() {
           </div>
         )}
       </main>
+      {data && (
+        <Guide
+          id="collections"
+          steps={[
+            { at: "saved", title: "Everything you saved", text: "Every film, book, song and link you've saved, whether or not it's in a collection." },
+            data.cols.length
+              ? { at: "boards", title: "Collections are boards", text: "Group things that belong together. Open one to see it as tiles, or as a board you can arrange and decorate." }
+              : { at: "new-col", title: "Make a collection", text: "Group things that belong together, like “For a rainy Sunday”." },
+          ]}
+        />
+      )}
       {making && (
         <CollectionForm
           onClose={() => setMaking(false)}

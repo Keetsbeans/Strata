@@ -52,6 +52,7 @@ export default function TopIcons({ dark }: { dark?: boolean }) {
           aria-label={menu === "open" ? "Close the menu" : "Menu"}
           aria-expanded={menu === "open"}
           aria-controls="menu-drawer"
+          data-tip="menu"
           onClick={toggleMenu}
         >
           <i />

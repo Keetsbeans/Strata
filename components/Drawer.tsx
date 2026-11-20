@@ -46,6 +46,7 @@ export default function Drawer({ closing, onClose }: { closing: boolean; onClose
           <span style={{ width: 52 }} aria-hidden="true" />
         </div>
         <nav className="stack" style={{ gap: 6 }} aria-label="Menu">
+          {row("/threads/", "thread", "Threads", "One idea, followed over time")}
           <div className="drawer-row soon" aria-disabled="true">
             <span className="drawer-ic"><Icon name="clock" size={19} /></span>
             <span className="grow stack" style={{ gap: 1 }}>

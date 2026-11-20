@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useApp } from "../providers";
 import { takeUndo, useData, type Undo } from "@/lib/useData";
 import { day } from "@/lib/dates";
@@ -17,26 +17,39 @@ import Icon from "@/components/Icon";
 import TopIcons from "@/components/TopIcons";
 import SlideSeg from "@/components/SlideSeg";
 import type { Thought } from "@/lib/types";
-import { putInThread } from "@/lib/threads";
+import { isUnsorted, putInThread } from "@/lib/threads";
+import Guide from "@/components/Guide";
 
 function Thoughts() {
   const { store } = useApp();
   const q = useSearchParams();
-  const filter = ((q.get("filter") as "unsorted" | "unfinished") || "all") as "all" | "unsorted" | "unfinished";
+  const router = useRouter();
+  const raw = q.get("filter");
   const dayParam = q.get("day");
+  // no tab asked for: open on Unsorted when anything is waiting, otherwise on Threads
+  const asked: "all" | "unsorted" | "unfinished" | null = raw === "unsorted" || raw === "unfinished" || raw === "all" ? raw : dayParam ? "all" : null;
   const { data: d, error, reload } = useData(async () => {
-    const [thoughts, threads] = await Promise.all([store.thoughts(), store.threads()]);
-    return { thoughts, names: new Map(threads.map((t) => [t.id, t.title])) };
+    const [thoughts, threads, links] = await Promise.all([store.thoughts(), store.threads(), store.threadLinks()]);
+    return { thoughts, links, names: new Map(threads.map((t) => [t.id, t.title])) };
   }, [store]);
   const data = d?.thoughts;
-  const [view, setView] = useState<"list" | "cards">(q.get("view") === "list" ? "list" : "cards");
+  const unsortedCount = d ? d.thoughts.filter((t) => isUnsorted(t, d.links)).length : 0;
+  const filter = asked ?? "unsorted";
+  const goThreads = !!d && !asked && unsortedCount === 0;
   useEffect(() => {
-    if (q.get("view")) return;
+    if (goThreads) router.replace("/threads/");
+  }, [goThreads, router]);
+  // cards suit sorting (Unsorted), a list suits looking back (All). Each remembers its own choice.
+  const [views, setViews] = useState<{ unsorted: "list" | "cards"; all: "list" | "cards" }>({ unsorted: "cards", all: "list" });
+  useEffect(() => {
     try {
-      if (localStorage.getItem("strata:thoughts-view") === "list") setView("list");
+      const u = localStorage.getItem("strata:unsorted-view");
+      const a = localStorage.getItem("strata:all-view");
+      setViews((v) => ({ unsorted: u === "list" ? "list" : v.unsorted, all: a === "cards" ? "cards" : v.all }));
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const urlView = q.get("view");
+  const view: "list" | "cards" = urlView === "list" || urlView === "cards" ? urlView : filter === "unsorted" ? views.unsorted : views.all;
   const [pinning, setPinning] = useState<Thought | null>(null);
   const [holding, setHolding] = useState<Thought | null>(null);
   const [note, setNote] = useState("");
@@ -55,9 +68,9 @@ function Thoughts() {
   const doneUndo = useCallback(() => setUndo(null), []);
 
   if (error) return <main className="screen"><p className="error">{error}</p><Nav /></main>;
-  if (!data) return <main className="screen"><Nav /></main>;
+  if (!data || goThreads) return <main className="screen"><Nav /></main>;
 
-  const unsorted = data.filter((t) => t.finished && !t.topics.length && !t.kept);
+  const unsorted = data.filter((t) => isUnsorted(t, d.links));
   const unfinished = data.filter((t) => !t.finished);
   let list = filter === "unsorted" ? unsorted : filter === "unfinished" ? unfinished : data;
   if (dayParam) {
@@ -102,15 +115,16 @@ function Thoughts() {
   const cardsOk = filter !== "unfinished";
   const showCards = view === "cards" && cardsOk && !selecting;
   const pickView = (v: "list" | "cards") => {
-    setView(v);
+    const key = filter === "unsorted" ? "unsorted" : "all";
+    setViews((x) => ({ ...x, [key]: v }));
     try {
-      localStorage.setItem("strata:thoughts-view", v);
+      localStorage.setItem(`strata:${key}-view`, v);
     } catch {}
-    window.history.replaceState(null, "", v === "cards" ? `?${new URLSearchParams({ ...(filter !== "all" ? { filter } : {}), view: "cards" })}` : filter !== "all" ? `?filter=${filter}` : "/thoughts/");
+    router.replace(`/thoughts/?filter=${filter}`, { scroll: false });
   };
   const label = dayParam
     ? `${list.length} on ${day(new Date(dayParam + "T12:00"))}`
-    : `${list.length} ${list.length === 1 ? "thought" : "thoughts"}${filter === "unsorted" ? " without a topic yet" : filter === "unfinished" ? " you left halfway" : ", newest first"}`;
+    : `${list.length} ${list.length === 1 ? "thought" : "thoughts"}${filter === "unsorted" ? " waiting to be sorted" : filter === "unfinished" ? " you left halfway" : ", newest first"}`;
 
   return (
     <>
@@ -127,7 +141,7 @@ function Thoughts() {
         </header>
         <ThoughtTabs on={filter} unsorted={unsorted.length} unfinished={unfinished.length} />
         {dayParam && (
-          <Link href="/thoughts/" className="small" style={{ fontWeight: 600 }}>
+          <Link href="/thoughts/?filter=all" className="small" style={{ fontWeight: 600 }}>
             Showing one day only. Show every day
           </Link>
         )}
@@ -184,7 +198,7 @@ function Thoughts() {
             <h2>{filter === "unsorted" ? "All sorted" : filter === "unfinished" ? "Nothing half-written" : dayParam ? "Nothing on this day" : "No thoughts yet"}</h2>
             <p>
               {filter === "unsorted"
-                ? "Every thought has a topic or has been looked at."
+                ? "Every thought is kept, has a topic, or sits in a thread."
                 : filter === "unfinished"
                   ? "Drafts you leave halfway wait here until you come back."
                   : "Whatever you write keeps its date and time, and lines up here."}
@@ -200,6 +214,15 @@ function Thoughts() {
           </Link>
         )}
       </main>
+      {!selecting && (
+        <Guide
+          id="thoughts"
+          steps={[
+            { at: "tabs", title: "Where your thoughts sit", text: "Unsorted holds new thoughts you haven't done anything with yet. Keep one, give it a topic, or add it to a thread and it's sorted. Threads and All are right next to it." },
+            { at: "menu", title: "That's it", text: "Threads are also in the menu, if you want a shortcut." },
+          ]}
+        />
+      )}
       {selecting ? (
         <div className="bar">
           <button className="btn grow" disabled={!picked.length} onClick={() => setToThread(true)}>

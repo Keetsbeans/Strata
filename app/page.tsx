@@ -15,6 +15,8 @@ import TopIcons from "@/components/TopIcons";
 import { comingBack } from "@/lib/inbox";
 import { introSeen, markIntro } from "@/lib/intro";
 import Onboarding from "@/components/Onboarding";
+import { isUnsorted } from "@/lib/threads";
+import Guide from "@/components/Guide";
 
 function greeting(d: Date) {
   const h = d.getHours();
@@ -27,8 +29,8 @@ function greeting(d: Date) {
 export default function Home() {
   const { store } = useApp();
   const { data, error } = useData(async () => {
-    const [thoughts, threads, interests, collections, links] = await Promise.all([store.thoughts(), store.threads(), store.interests(), store.collections(), store.links()]);
-    return { thoughts, threads, interests, collections, links };
+    const [thoughts, threads, interests, collections, links, threadLinks] = await Promise.all([store.thoughts(), store.threads(), store.interests(), store.collections(), store.links(), store.threadLinks()]);
+    return { thoughts, threads, interests, collections, links, threadLinks };
   }, [store]);
   const [hideLast, setHideLast] = useState(false);
   // people who set up before the opening screens existed, or who asked to see them again
@@ -55,12 +57,12 @@ export default function Home() {
   if (error) return <main className="screen"><p className="error">{error}</p><Nav /></main>;
   if (!data) return <main className="screen"><Nav /></main>;
 
-  const { thoughts, threads, interests, collections, links } = data;
+  const { thoughts, threads, interests, collections, links, threadLinks } = data;
   const back = comingBack(thoughts, interests, now);
   const recentItems = interests.slice(0, 6);
   const finished = thoughts.filter((t) => t.finished);
   const drafts = thoughts.filter((t) => !t.finished).sort((a, b) => b.updated_at.localeCompare(a.updated_at));
-  const unsorted = finished.filter((t) => !t.topics.length && !t.kept);
+  const unsorted = finished.filter((t) => isUnsorted(t, threadLinks));
   // the one note you worked on last, finished or not
   const last = [...thoughts].sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
   const todayCount = finished.filter((t) => sameDay(new Date(t.created_at), now)).length;
@@ -91,7 +93,7 @@ export default function Home() {
             </>
           )}
         </h1>
-        <Link className="btn lilac block new-big" href="/new/">
+        <Link className="btn lilac block new-big" href="/new/" data-tip="new">
           <Icon name="plus" size={20} /> New thought
         </Link>
       </header>
@@ -187,7 +189,7 @@ export default function Home() {
         </section>
 
         {threads.length > 0 && (
-          <section className="stack" style={{ gap: 10 }}>
+          <section className="stack" style={{ gap: 10 }} data-tip="threads">
             <div className="between">
               <h2 style={{ fontSize: 17 }}>Your threads</h2>
               <Link href="/threads/" className="link" style={{ fontSize: 13 }}>
@@ -218,7 +220,7 @@ export default function Home() {
           <h2 style={{ fontSize: 17 }}>Your folders</h2>
           {first && <span className="small muted">These fill up as you go. Nothing needs sorting today.</span>}
           <div className="folders">
-            <Folder href="/thoughts/?filter=unsorted&view=cards" label="Unsorted" count={unsorted.length} icon="flip" colour="var(--butter)" sheet="var(--blue)" />
+            <Folder href="/thoughts/?filter=unsorted" label="Unsorted" count={unsorted.length} icon="flip" colour="var(--butter)" sheet="var(--blue)" />
             <Folder href="/stack/" label="Unfinished" count={drafts.length} icon="unfinished" colour="var(--blue)" sheet="var(--lilac)" />
             <Folder href="/interests/" label="Saved" count={interests.length} icon="interests" colour="var(--lilac)" sheet="var(--butter)" />
             <Folder href="/collections/" label="Collections" count={collections.length} icon="collections" colour="var(--butter)" sheet="var(--lilac)" />
@@ -271,6 +273,17 @@ export default function Home() {
           </section>
         )}
       </main>
+      <Guide
+        id="home"
+        wait={900}
+        steps={[
+          { at: "new", title: "Start with a thought", text: "Anything on your mind, big or small. Every thought keeps its date and time." },
+          threads.length
+            ? { at: "threads", title: "Your threads", text: "A thread follows one idea over time. Add a thought to one whenever the idea comes back." }
+            : { at: "nav-thoughts", title: "Threads live in Thoughts", text: "When an idea keeps coming back, start a thread for it from any thought. You'll find them under Thoughts." },
+          { at: "menu", title: "The menu", text: "Threads, your calendar, imports and settings are all in here." },
+        ]}
+      />
       <Nav />
     </>
   );
