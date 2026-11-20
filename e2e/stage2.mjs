@@ -607,7 +607,7 @@ try {
   await shot("24-swipe");
   await page.mouse.up();
   await page.waitForFunction((b) => document.querySelector(".swipe-help")?.textContent !== b, before, { timeout: 4000 });
-  ok(true, "swiping right kept the card and moved on");
+  ok(await seen(page.getByText("Kept. It stays in All, and leaves Unsorted.")), "swiping right kept the card, moved on, and says where it went");
   const upText = (await page.locator(".deck-front .ruled-text").innerText()).slice(0, 20);
   const ub = await page.locator(".deck-front").boundingBox();
   await page.mouse.move(ub.x + ub.width / 2, ub.y + ub.height / 2);
