@@ -353,6 +353,7 @@ export class LocalStore implements Store {
   async deleteCollection(id: string) {
     this.db.collections = this.db.collections.filter((x) => x.id !== id);
     this.db.collectionItems = this.db.collectionItems.filter((x) => x.collection_id !== id);
+    this.db.thoughts.forEach((t) => t.collection_id === id && (t.collection_id = null));
     this.write();
   }
   async addToCollection(collectionId: string, what: { interest_id: string }) {

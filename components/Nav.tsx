@@ -20,7 +20,7 @@ export default function Nav() {
   const current = items.find((it) => !it.plus && on(it))?.href ?? "";
   const { ref, pos } = useSlider<HTMLElement>('a[aria-current="page"]:not(.plus)', [current], "nav");
   return (
-    <nav className="nav" aria-label="Main" ref={ref}>
+    <nav className="nav" aria-label="Main" ref={ref} data-tip="nav">
       {pos && <span className="nav-pill" aria-hidden="true" style={{ left: pos.left, width: pos.width }} />}
       {items.map((it) => {
         const here = on(it);

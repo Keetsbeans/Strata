@@ -6,6 +6,7 @@ import { useApp } from "../providers";
 import { useData } from "@/lib/useData";
 import { day, time } from "@/lib/dates";
 import Icon from "@/components/Icon";
+import Toast from "@/components/Toast";
 import Dialog, { Choice } from "@/components/Dialog";
 import PickUpRow from "@/components/PickUpRow";
 import PickMany from "@/components/PickMany";
@@ -123,7 +124,7 @@ function ThreadView() {
           <Icon name="plus" size={16} /> Add thoughts
         </button>
       </div>
-      {note && <span className="small muted" role="status">{note}</span>}
+      {note && <Toast title={note} onDone={() => setNote("")} />}
       <ol className="timeline" ref={listRef} style={{ scrollMarginTop: 16 }}>
         {entries.map(({ thought: t, root, link }) => (
           <TimelineCard

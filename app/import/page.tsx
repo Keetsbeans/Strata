@@ -8,6 +8,7 @@ import { day } from "@/lib/dates";
 import { getMoods } from "@/lib/moods";
 import { usePictureFill } from "@/lib/catalog/pictures";
 import Icon from "@/components/Icon";
+import Toast from "@/components/Toast";
 import { CollectionPicker } from "@/components/Pickers";
 import { FilterBar, NO_FILTERS, SavedTile, matches, type Filters } from "@/components/Saved";
 import SwipeCard from "@/components/SwipeCard";
@@ -96,7 +97,7 @@ function ImportSort() {
         <span className="small muted" style={{ marginTop: -8 }}>
           {flip ? "One at a time: tap a mood, then swipe to the next." : "Tap things to pick them, then give them a mood or add them to a collection. Everything is already saved."}
         </span>
-        {note && <span className="small muted" role="status">{note}</span>}
+        {note && <Toast title={note} onDone={() => setNote("")} />}
         {flip ? (
           <FlipImport
             items={shown}

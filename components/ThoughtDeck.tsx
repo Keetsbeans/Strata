@@ -11,6 +11,7 @@ import Buddy from "./Buddy";
 import SwipeCard from "./SwipeCard";
 import { preview } from "./ThoughtCard";
 import { tipSeen } from "@/lib/tips";
+import Toast from "./Toast";
 
 /**
  * Thoughts as a deck of cards, one at a time.
@@ -62,21 +63,29 @@ export default function ThoughtDeck({
   const step = () => setDone((d) => [...d, t.id]);
   useEffect(() => setTopics(t?.topics ?? []), [t]);
 
-  // a short line after each swipe saying where the card went
-  // after Keep, the line offers the thread picker for that card, without forcing it
-  const [flash, setFlashRaw] = useState<{ text: string; kept?: Thought } | null>(null);
-  const setFlash = (text: string, kept?: Thought) => setFlashRaw({ text, kept });
+  // a short line after Not sure; after Keep, a pop-up offers a thread for 5 seconds, without forcing one
+  const [flash, setFlash] = useState("");
   useEffect(() => {
     if (!flash) return;
-    const id = setTimeout(() => setFlashRaw(null), flash.kept ? 5000 : 2600);
+    const id = setTimeout(() => setFlash(""), 2600);
     return () => clearTimeout(id);
   }, [flash]);
+  const [kept, setKept] = useState<Thought | null>(null);
+  const keptToast = kept && (
+    <Toast
+      title="Kept, and sorted"
+      line={`“${preview(kept.body, 40)}”`}
+      action={{ label: "Add to a thread", onClick: () => onPin(kept) }}
+      onDone={() => setKept(null)}
+    />
+  );
   const keep = async () => {
     await store.updateThought(t.id, topics.length ? { topics, kept: true } : { kept: true });
-    setFlash("Kept, and sorted.", t);
+    setKept(t);
     step();
   };
   const discard = async () => {
+    setKept(null);
     await store.discardThoughts([t.id]);
     onDiscard(t);
     step();
@@ -94,12 +103,14 @@ export default function ThoughtDeck({
             Go through them again
           </button>
         )}
+        {keptToast}
       </div>
     );
 
   const th = threadName(t);
   return (
     <div className="stack" style={{ gap: 14 }}>
+      {keptToast}
       {guide && (
         <div className="guide-layer" role="dialog" aria-modal="true" aria-label="How flipping works" onClick={doneGuide}>
           <div className="guide-box" onClick={(e) => e.stopPropagation()}>
@@ -131,7 +142,7 @@ export default function ThoughtDeck({
               <span className="small muted">{stamp(t.created_at)}</span>
               {th && <span className="small">In “{th}”</span>}
             </span>
-            <button className={"pin-btn" + (t.thread_id ? " on" : "")} style={{ position: "static", margin: "-10px -10px 0 0" }} aria-label={t.thread_id ? "Add it to another thread" : "Add to a thread"} onClick={() => onPin(t)}>
+            <button data-tip="pin" className={"pin-btn" + (t.thread_id ? " on" : "")} style={{ position: "static", margin: "-10px -10px 0 0" }} aria-label={t.thread_id ? "Add it to another thread" : "Add to a thread"} onClick={() => onPin(t)}>
               <i><Icon name="pin" size={15} width={2} /></i>
             </button>
           </div>
@@ -144,17 +155,7 @@ export default function ThoughtDeck({
       </div>
       <p className="small muted swipe-help" role="status">
         {flash ? (
-          <span className="swipe-flash">
-            {flash.text}
-            {flash.kept && (
-              <>
-                {" "}
-                <button className="link small" style={{ minHeight: 44, fontWeight: 600 }} onClick={() => (onPin(flash.kept!), setFlashRaw(null))}>
-                  Add it to a thread?
-                </button>
-              </>
-            )}
-          </span>
+          <span className="swipe-flash">{flash}</span>
         ) : (
           <>
             {pile.length - left.length + 1} of {pile.length} ·{" "}
@@ -162,7 +163,7 @@ export default function ThoughtDeck({
           </>
         )}
       </p>
-      <div className="review-actions">
+      <div className="review-actions" data-tip="deck">
         <button className="btn sm act no" onClick={discard}><Icon name="swipe-left" size={17} />Discard</button>
         <button className="btn sm act maybe" onClick={later} aria-label="Not sure, leave it unsorted"><Icon name="swipe-up" size={17} />Not sure</button>
         <button className="btn sm act yes" onClick={keep}><Icon name="swipe-right" size={17} />Keep</button>

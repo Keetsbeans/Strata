@@ -12,6 +12,8 @@ export type Thought = {
   thread_id: string | null;
   /** the film, book, song or article this thought is pinned to */
   interest_id?: string | null;
+  /** the collection this thought is about (it stays in Thoughts; the collection lists it under "Your thoughts") */
+  collection_id?: string | null;
   /** "letterboxd" or "goodreads" when it came in with an import */
   source?: string | null;
   created_at: string;

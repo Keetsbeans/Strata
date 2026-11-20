@@ -12,6 +12,7 @@ import { FilterBar, NO_FILTERS, SavedRow, SavedTile, kindWord, matches, type Fil
 import Icon from "@/components/Icon";
 import { usePictureFill } from "@/lib/catalog/pictures";
 import Nav from "@/components/Nav";
+import Toast from "@/components/Toast";
 import Mascot from "@/components/Mascot";
 import Dialog from "@/components/Dialog";
 
@@ -116,7 +117,7 @@ function Library() {
           </div>
         )}
         {selecting && <span className="small muted" style={{ marginTop: -6 }}>Tap things to pick them, then choose what to do below. Filters still work while you select.</span>}
-        {note && !selecting && <span className="small muted" role="status">{note}</span>}
+        {note && !selecting && <Toast title={note} onDone={() => setNote("")} />}
         {tiles.length > 0 && (
           <div className="saved-grid">
             {tiles.map((it) => (

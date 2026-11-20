@@ -5,7 +5,7 @@ import type { Store } from "@/lib/store/types";
 import { putInThread } from "@/lib/threads";
 import Icon from "./Icon";
 import ThreadPicker from "./ThreadPicker";
-import { InterestPicker } from "./Pickers";
+import { WordLinkPicker } from "./Pickers";
 import { preview } from "./ThoughtCard";
 
 /** what press-and-hold on a thought opens: add it to a thread, pin it to a film or book, or discard it */
@@ -31,13 +31,21 @@ export default function ThoughtMenu({ store, thought, onDone, onClose, extra }: 
     );
   if (step === "pin")
     return (
-      <InterestPicker
+      <WordLinkPicker
         store={store}
+        word=""
+        whole
         onClose={onClose}
-        onPick={async (iid) => {
-          await store.updateThought(thought.id, { interest_id: iid });
-          const it = await store.interest(iid);
-          onDone(`Pinned to ${it?.title ?? "it"}.`);
+        onPick={async (kind, target) => {
+          if (kind === "collection") {
+            await store.updateThought(thought.id, { collection_id: target });
+            const c = await store.collection(target);
+            onDone(`Added to “${c?.title ?? "the collection"}”.`);
+          } else {
+            await store.updateThought(thought.id, { interest_id: target });
+            const it = await store.interest(target);
+            onDone(`Added to ${it?.title ?? "it"}.`);
+          }
         }}
       />
     );
@@ -51,7 +59,7 @@ export default function ThoughtMenu({ store, thought, onDone, onClose, extra }: 
             <Icon name="thread" size={18} /> Add to a thread
           </button>
           <button className="qm-row" onClick={() => setStep("pin")}>
-            <Icon name="pin" size={18} /> Pin to a film, book or song
+            <Icon name="link" size={18} /> Add to a collection
           </button>
           {extra && (
             <button className="qm-row" onClick={extra.run}>

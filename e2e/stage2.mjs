@@ -170,6 +170,11 @@ try {
   await go("/collection/?id=c1");
   await page.getByRole("button", { name: "Board" }).click();
   await page.locator(".board-item").first().waitFor();
+  ok(await seen(page.locator(".board-screen")), "the board opens full screen");
+  ok(!(await page.getByRole("navigation", { name: "Main" }).count()), "the bottom bar steps aside for the board");
+  ok(await seen(page.getByRole("toolbar", { name: "Decorate the board" }).getByRole("button", { name: "Stickers" })), "the tools dock sits where the bottom bar was");
+  await page.waitForTimeout(600);
+  await shot("04a-board-full");
   const n = await page.locator(".board-item").count();
   ok(n >= 3, "every film sits on the board");
   const first = page.locator(".board-item").nth(1);
@@ -208,12 +213,13 @@ try {
   await page.waitForURL(/\/interest\//);
   ok(true, "tapping a film on the board opens it");
   await go("/collection/?id=c1");
-  await page.getByRole("button", { name: "Tiles" }).click();
+  await page.getByRole("button", { name: "Back to tiles" }).click();
+  ok(await seen(page.getByRole("navigation", { name: "Main" })), "back to tiles, the bottom bar returns");
 
   console.log("Pin an existing thought from its own page");
   await go("/thoughts/?filter=all");
   await page.getByText("A website is closer to a room than a poster.").click();
-  await page.getByRole("button", { name: "Pin to a film, book or song" }).click();
+  await page.getByRole("button", { name: "Add to a collection" }).click();
   await page.getByRole("button", { name: /Columbus/ }).click();
   ok(await seen(page.getByRole("link", { name: /Columbus/ })), "thought shows the film it's pinned to");
 
@@ -268,7 +274,13 @@ try {
   await shot("05b-link-sheet");
   await page.getByRole("button", { name: "Add to 1 thread" }).click();
   ok((await page.getByRole("region", { name: "Threads" }).getByRole("link").count()) === 2, "one thought in two threads, listed the same way");
-  ok(!(await page.getByRole("button", { name: "Add to a collection" }).count()), "thoughts no longer go into collections");
+  await page.getByRole("button", { name: "Add to a collection" }).click();
+  await page.getByRole("button", { name: /For a rainy Sunday/ }).click();
+  ok(await seen(page.getByRole("heading", { name: "In a collection" })), "Add to a collection links the whole thought to a collection");
+  await page.getByRole("link", { name: /For a rainy Sunday/ }).click();
+  await page.waitForURL(/\/collection\//);
+  ok(await seen(page.getByRole("heading", { name: "Your thoughts" })), "and the collection lists it under Your thoughts");
+  await shot("05b2-collection-thoughts");
 
   console.log("Thoughts screen: tabs, list or cards, pin to a thread");
   await go("/thoughts/");
@@ -471,7 +483,8 @@ try {
 
   console.log("Home and export");
   await go("/");
-  ok(await seen(page.getByText("Recently saved films, books and music")), "Home shows recently saved things, named for what they are");
+  ok(await seen(page.getByRole("heading", { name: "Collections" })), "Home shows your collections");
+  ok(!(await page.locator(".folders").getByText("Saved").count()), "no Saved folder on Home");
   ok((await page.locator(".week-row a, .week-row .strip-day").count()) === 7, "the date row shows one week");
   await page.getByRole("button", { name: "Previous week" }).click();
   ok(await seen(page.getByText(/Last week/)), "and can go back a week");
@@ -479,7 +492,8 @@ try {
   ok(await seen(page.getByRole("heading", { name: "Your threads" })), "Your threads sits on Home");
   await page.locator(".has-mascot .card-mascot").first().click();
   ok((await page.locator(".card-mascot.pop").count()) === 1 && new URL(page.url()).pathname === "/", "tapping the mascot makes it pop, and stays on the page");
-  ok(await seen(page.getByRole("link", { name: /^Collections, \d+$/ })), "Home has a Collections folder");
+  ok(await seen(page.locator(".board-card").first()), "Home shows collection boards in the Collections section");
+  ok((await page.locator(".folders a").count()) === 4, "four folders: Unsorted, Unfinished, Threads, Inbox");
   await shot("09-home");
 
   console.log("Profile, settings and colour themes");
@@ -613,8 +627,11 @@ try {
   await shot("24-swipe");
   await page.mouse.up();
   await page.waitForFunction((b) => document.querySelector(".swipe-help")?.textContent !== b, before, { timeout: 4000 });
-  ok(await seen(page.getByText("Kept, and sorted.")), "swiping right kept the card, moved on, and says it's sorted");
-  ok(await seen(page.locator(".swipe-flash").getByRole("button", { name: "Add it to a thread?" })), "and offers a thread, without forcing one");
+  ok(await seen(page.locator(".toast").getByText("Kept, and sorted")), "swiping right kept the card, moved on, and says it's sorted");
+  ok(await seen(page.locator(".toast").getByRole("button", { name: "Add to a thread" })), "and offers a thread, without forcing one");
+  ok(await seen(page.locator(".toast .toast-time")), "with a bar counting down the 5 seconds");
+  await page.waitForTimeout(5400);
+  ok(!(await page.locator(".toast").count()), "and it leaves on its own after 5 seconds");
   const upText = (await page.locator(".deck-front .ruled-text").innerText()).slice(0, 20);
   const ub = await page.locator(".deck-front").boundingBox();
   await page.mouse.move(ub.x + ub.width / 2, ub.y + ub.height / 2);
@@ -634,14 +651,18 @@ try {
   await page.evaluate(() => localStorage.removeItem("strata:tips-seen"));
   await go("/");
   await page.locator(".tip-card").waitFor();
-  ok(await seen(page.locator(".tip-card").getByText("Start with a thought")), "Home's guide lights up New thought first");
+  ok(await seen(page.locator(".tip-card").getByText("Write a thought")), "Home's guide lights up New thought first");
+  ok(await seen(page.locator(".tip-card").getByRole("button", { name: "Skip the tour" })), "and can be skipped from the first step");
   await page.waitForTimeout(450);
   await shot("30-guide-home-1");
-  await page.locator(".tip-card").getByRole("button", { name: "Next" }).click();
-  ok(await seen(page.locator(".tip-card").getByText("Your threads")), "then points out Your threads");
-  await page.waitForTimeout(450);
-  await shot("30-guide-home-2");
-  await page.locator(".tip-card").getByRole("button", { name: "Next" }).click();
+  const titles = [];
+  for (let k = 0; k < 12 && (await page.locator(".tip-card").getByRole("button", { name: "Next" }).count()); k++) {
+    titles.push(await page.locator(".tip-card strong").first().innerText());
+    await page.locator(".tip-card").getByRole("button", { name: "Next" }).click();
+    await page.waitForTimeout(450);
+    if (k === 2) await shot("30-guide-home-2");
+  }
+  ok(titles.includes("Your threads") && titles.includes("Your folders") && titles.includes("Getting around"), "it walks through the whole page: " + titles.join(", "));
   ok(await seen(page.locator(".tip-path").getByText("Show tips again")), "the last step shows the way back: Menu, Settings, Show tips again");
   await page.waitForTimeout(450);
   await shot("30-guide-home-3");
@@ -653,13 +674,14 @@ try {
   await page.locator(".tip-card").waitFor();
   await page.waitForTimeout(450);
   await shot("31-guide-collections");
-  await page.locator(".tip-card").getByRole("button", { name: "Skip" }).click();
+  await page.locator(".tip-card").getByRole("button", { name: /^Skip/ }).click();
   await go("/collection/?id=c1");
   await page.getByRole("button", { name: "Board" }).click();
   await page.locator(".tip-card").waitFor();
+  ok(await seen(page.locator(".tip-card").getByText("1 of 4")), "the board guide has four steps");
   await page.waitForTimeout(450);
   await shot("32-guide-board");
-  await page.locator(".tip-card").getByRole("button", { name: "Skip" }).click();
+  await page.locator(".tip-card").getByRole("button", { name: /^Skip/ }).click();
   await go("/settings/");
   const tipSwitch = page.getByRole("switch", { name: "Show tips again" });
   ok((await tipSwitch.getAttribute("aria-checked")) === "true", "Settings has Show tips again, on while some guides are still to come");

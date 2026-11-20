@@ -70,11 +70,14 @@ export default function Guide({ id, steps, wait = 700 }: { id: string; steps: St
           </span>
         )}
         <span className="between">
-          <span className="tip-dots" aria-hidden="true">
-            {live.map((_, k) => <i key={k} className={k === i ? "on" : ""} />)}
+          <span className="row" style={{ gap: 8, alignItems: "center" }}>
+            <span className="tip-dots" aria-hidden="true">
+              {live.map((_, k) => <i key={k} className={k === i ? "on" : ""} />)}
+            </span>
+            <span className="small muted">{i + 1} of {live.length}</span>
           </span>
           <span className="row" style={{ gap: 4 }}>
-            {!last && <button className="link small" style={{ minHeight: 44, minWidth: 44 }} onClick={finish}>Skip</button>}
+            {!last && <button className="link small" style={{ minHeight: 44, minWidth: 44 }} onClick={finish}>{i === 0 ? "Skip the tour" : "Skip"}</button>}
             <button className="btn sm ink" style={{ minHeight: 44 }} onClick={() => (last ? finish() : setI(i + 1))}>{last ? "Got it" : "Next"}</button>
           </span>
         </span>

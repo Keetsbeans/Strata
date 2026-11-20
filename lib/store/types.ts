@@ -1,7 +1,7 @@
 import type { Collection, CollectionItem, Decor, ImportBatch, Interest, InterestKind, Placement, Thought, ThoughtKind, ThoughtVersion, Thread, ThreadLink, ThreadState, SavedLink } from "@/lib/types";
 
 export type NewThought = { body: string; kind: ThoughtKind; finished: boolean; topics?: string[]; thread_id?: string | null; interest_id?: string | null };
-export type ThoughtPatch = Partial<Pick<Thought, "body" | "topics" | "finished" | "thread_id" | "kind" | "kept" | "interest_id" | "word_links">>;
+export type ThoughtPatch = Partial<Pick<Thought, "body" | "topics" | "finished" | "thread_id" | "kind" | "kept" | "interest_id" | "collection_id" | "word_links">>;
 
 export type NewInterest = Pick<Interest, "kind" | "title"> & Partial<Omit<Interest, "id" | "created_at" | "updated_at">>;
 export type InterestPatch = Partial<Omit<Interest, "id" | "created_at" | "updated_at">>;

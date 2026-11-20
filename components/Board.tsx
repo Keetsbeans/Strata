@@ -47,8 +47,8 @@ export default function Board({ store, collectionId, things, decor, onDecor, cen
       // if nothing would show, slide the view just far enough to bring the nearest one back
       const all = [...Object.values(spotsRef.current), ...decor];
       if (!all.length) return n;
-      // most of the item must show, below the tools and above the bottom bar
-      const top = 56, bottom = Math.min(r.height, window.innerHeight - r.top - 110) - 8;
+      // most of the item must stay on the board
+      const top = 8, bottom = r.height - 84; // clear of the tools dock
       const shift = (lo: number, hi: number, a: number, b: number) => {
         const keep = Math.min((hi - lo) * 0.7, (b - a) / 2);
         return hi < a + keep ? a + keep - hi : lo > b - keep ? b - keep - lo : 0;
@@ -195,10 +195,6 @@ export default function Board({ store, collectionId, things, decor, onDecor, cen
 
   return (
     <div className="board-wrap">
-      <div className="board-tools" data-tip="board-tools">
-        {tools}
-        <button className="pill" onClick={fit}><span>Back to start</span></button>
-      </div>
       <div
         className="board"
         data-tip="board"
@@ -266,6 +262,10 @@ export default function Board({ store, collectionId, things, decor, onDecor, cen
             Take this off
           </button>
         )}
+      </div>
+      <div className="board-dock" data-tip="board-tools" role="toolbar" aria-label="Decorate the board">
+        {tools}
+        <button onClick={fit}>Back to start</button>
       </div>
     </div>
   );
