@@ -284,7 +284,17 @@ try {
   ok(await seen(page.getByRole("tab", { name: /Unsorted/ })), "filters are tabs, not buttons");
   ok(!(await page.getByRole("tab", { name: "Threads" }).count()), "Threads isn't a tab any more; it's in the bottom bar");
   const navNames = await page.getByRole("navigation", { name: "Main" }).getByRole("link").evaluateAll((els) => els.map((e) => e.getAttribute("aria-label") || e.textContent.trim()));
-  ok(navNames.join(",").startsWith("Home,Threads,") && navNames.slice(-2).join(",") === "Thoughts,Collections", "bottom bar is Home, Threads, +, Thoughts, Collections: " + navNames.join(","));
+  ok(navNames.join(",") === "Home,Thoughts,New thought,Collections", "bottom bar is Home, Thoughts, +, Collections: " + navNames.join(","));
+  await page.getByRole("navigation", { name: "Main" }).getByRole("button", { name: "More" }).click();
+  const drawer = page.getByRole("dialog", { name: "More" });
+  ok(await seen(drawer.getByRole("link", { name: /Threads/ })), "More opens a drawer with Threads");
+  ok(await seen(drawer.getByText("Time capsules")), "and a place for time capsules");
+  await page.waitForTimeout(450);
+  await shot("05c2-drawer");
+  await drawer.getByRole("link", { name: /Threads/ }).click();
+  await page.waitForURL(/\/threads\//);
+  ok(true, "Threads opens from the drawer");
+  await go("/thoughts/");
   ok(await seen(page.locator("header").getByRole("link", { name: /^Inbox/ })), "Inbox is an icon at the top right");
   await page.locator("header").getByRole("button", { name: "Search" }).click();
   ok(await seen(page.locator(".search-sheet")), "search slides in over the screen");
