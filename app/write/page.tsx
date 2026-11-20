@@ -29,6 +29,7 @@ function Write() {
   const [threadId, setThreadId] = useState<string | null>(threadParam);
   const [interestId, setInterestId] = useState<string | null>(q.get("interest"));
   const [interestTitle, setInterestTitle] = useState<string | null>(null);
+  const [jar, setJar] = useState(q.get("jar") === "1");
   const [wasFinished, setWasFinished] = useState(false);
   const [loaded, setLoaded] = useState(!id);
   const [leaving, setLeaving] = useState(false);
@@ -51,6 +52,7 @@ function Write() {
         setKind(t.kind);
         setThreadId(t.thread_id);
         setInterestId(t.interest_id ?? null);
+        setJar(!!t.jar);
         setWasFinished(t.finished);
         setLoaded(true);
       });
@@ -83,10 +85,11 @@ function Write() {
     setBusy(true);
     setError("");
     try {
-      const patch = { body: body.trim(), topics, kind, finished, thread_id: threadId, interest_id: interestId };
+      const patch = { body: body.trim(), topics, kind, finished, thread_id: threadId, interest_id: interestId, jar };
       const t = id ? await store.updateThought(id, patch) : await store.addThought(patch);
       setOriginal(body);
       if (!finished) router.replace("/");
+      else if (jar && !id) router.replace("/jar/?added=1");
       else if (interestId && !id) router.replace(`/interest/?id=${interestId}`);
       else if (threadId && !id) router.replace(`/thread/?id=${threadId}`);
       else router.replace(`/thought/?id=${t.id}`);
@@ -108,7 +111,7 @@ function Write() {
           <Icon name="back" />
         </button>
         <span className="h-mid" style={{ fontWeight: 600 }}>
-          {id ? (wasFinished ? "Edit thought" : "Unfinished") : kind === "card" ? "New thought" : "Long reflection"}
+          {id ? (wasFinished ? "Edit thought" : "Unfinished") : jar ? "For the jar" : kind === "card" ? "New thought" : "Long reflection"}
         </span>
         <button className="btn sm ink" style={{ fontWeight: 600 }} disabled={empty || busy} onClick={() => save(true)}>
           Save
@@ -140,6 +143,15 @@ function Write() {
       <Dictate autoSpeak={q.get("speak") === "1"} onText={(t) => setBody((b) => (b && !/\s$/.test(b) ? b + " " : b) + t)} />
 
       <Topics value={topics} onChange={setTopics} known={known} />
+
+      <button type="button" className={"jar-toggle" + (jar ? " on" : "")} role="switch" aria-checked={jar} onClick={() => setJar(!jar)}>
+        <span className="jar-mini" aria-hidden="true"><i /></span>
+        <span className="stack grow" style={{ gap: 1, textAlign: "left" }}>
+          <strong>Put it in the gratitude jar</strong>
+          <span className="small muted">{jar ? "It goes in the jar. No thread or topic needed." : "Something you're grateful for? Keep it in the jar."}</span>
+        </span>
+        <span className="switch" aria-hidden="true"><span /></span>
+      </button>
 
       {kind === "card" && body.length > LONG_AT && (
         <button className="card row" style={{ textAlign: "left", background: "var(--blue)" }} onClick={() => setKind("page")}>
@@ -240,7 +252,7 @@ function Write() {
                 <button
                   className="btn ink block shadow"
                   onClick={() => {
-                    holdPending({ body: body.trim(), topics, kind, finished: askAccount, thread_id: threadId, interest_id: interestId ?? null });
+                    holdPending({ body: body.trim(), topics, kind, finished: askAccount, thread_id: threadId, interest_id: interestId ?? null, jar });
                     setGuest(false);
                     try {
                       localStorage.removeItem("strata:mode");

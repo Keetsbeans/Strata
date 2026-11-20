@@ -17,7 +17,7 @@ import { CollectionForm, contents } from "@/components/CollectionBits";
 import Safe from "@/components/Safe";
 import Guide from "@/components/Guide";
 import { day } from "@/lib/dates";
-import Board, { STICKERS, gridSpot } from "@/components/Board";
+import Board, { STICKERS } from "@/components/Board";
 import type { Decor } from "@/lib/types";
 import { FilterBar, NO_FILTERS, SavedRow, SavedTile, matches, type Filters } from "@/components/Saved";
 
@@ -204,14 +204,6 @@ function CollectionView() {
                 <>
                   <button onClick={() => setDrawer("stickers")}>Stickers</button>
                   <button onClick={() => setDrawer("labels")}>Label</button>
-                  <button
-                    onClick={async () => {
-                      await Promise.all(things.map((e, i) => store.placeItem(e.x.id, gridSpot(i))));
-                      reload();
-                    }}
-                  >
-                    Tidy up
-                  </button>
                 </>
               }
             />
@@ -219,9 +211,10 @@ function CollectionView() {
           <Guide
             id="board"
             steps={[
-              { at: "board", title: "Your board", text: "Drag with one finger to look around, and pinch to zoom in or out." },
+              { at: "board", title: "Your board", text: "Drag with one finger to look around, and pinch to zoom in or out. The board has edges, so nothing gets lost." },
               { at: "board", title: "Move things around", text: "Press and hold a poster or sticker until it lifts, then drag it where you like. Tap a poster to open it." },
-              { at: "board-tools", title: "Decorate it", text: "Stickers and Label add little extras. Tidy up puts everything back in rows. Back to start brings the view home if you get lost." },
+              { at: "board-tools", title: "Decorate it", text: "Stickers and Label add little extras. Tidy up puts everything back in neat rows." },
+              { at: "board-undo", title: "Undo and redo", text: "Changed your mind? Step back or forward through your last moves." },
               { at: "board-back", title: "Back to tiles", text: "This arrow takes you back to the plain grid. The board remembers where you put everything." },
             ]}
           />

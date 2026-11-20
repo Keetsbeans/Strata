@@ -798,3 +798,55 @@ textarea.ruled:focus, textarea.ruled:focus-visible { outline: none; box-shadow: 
 .board-dock button { flex: 1 1 0; min-width: 0; border: 0; background: transparent; box-shadow: none; color: var(--ink); font-size: 12.5px; padding: 0 4px; }
 .board-screen .board-dock { position: fixed; left: 12px; right: 12px; width: auto; }
 .board-screen { overflow: hidden; }
+/* the board is one sheet with edges; outside it is plain */
+.board-screen .board { background: color-mix(in srgb, var(--ink) 7%, var(--paper)); background-image: none; }
+.board-sheet { position: absolute; left: 0; top: 0; background-color: var(--paper); background-image: radial-gradient(circle, color-mix(in srgb, var(--ink) 30%, transparent) 9%, transparent 11%); background-size: 22px 22px; border: 2px solid var(--ink); border-radius: 18px; box-shadow: 6px 6px 0 var(--ink); }
+.board-undo { position: absolute; top: 10px; right: 12px; z-index: 6; display: flex; gap: 6px; }
+.board-undo .icon-btn { background: var(--card); box-shadow: 2px 2px 0 var(--ink); }
+.board-undo .icon-btn:disabled { opacity: 0.55; box-shadow: none; }
+/* ---------- gratitude jar ---------- */
+.jar-wrap { display: flex; justify-content: center; padding-top: 18px; }
+.jar-stage { position: relative; flex: 0 0 auto; }
+.jar-rock { position: absolute; inset: 0; transform-origin: 50% 94%; will-change: transform; }
+.jar-glass { position: absolute; left: 0; top: 0; pointer-events: none; }
+.jar-glass.back { z-index: 1; }
+.jar-notes { position: absolute; inset: 0; z-index: 2; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; clip-path: path("M84 64 H196 V80 C 196 92, 244 96, 246 120 V 300 Q 246 336, 210 336 H 70 Q 34 336, 34 300 V 120 C 36 96, 84 92, 84 80 Z"); }
+.jar-glass.front { z-index: 3; }
+.jar-note { position: absolute; left: 0; top: 0; width: 44px; height: 28px; border: 1.5px solid var(--ink); border-radius: 4px; box-shadow: 1px 1px 0 var(--ink); will-change: transform; pointer-events: none; }
+.jar-note::after { content: ""; position: absolute; left: 50%; top: 3px; bottom: 3px; border-left: 1px dashed color-mix(in srgb, var(--ink) 45%, transparent); }
+.jar-lid { position: absolute; left: 64px; top: 14px; width: 152px; height: 52px; padding: 0; border: 0; background: none; z-index: 4; cursor: pointer; transform-origin: 50% 60%; -webkit-tap-highlight-color: transparent; }
+.jar-lid svg { display: block; overflow: visible; }
+.jar-lid:not(.opening):not(.open):not(.closing):active { transform: translateY(1px) scale(0.98); }
+.jar-lid.opening { animation: lid-off 1.15s cubic-bezier(.45,.05,.3,1) both; }
+.jar-lid.open { transform: translate(-96px, -20px) rotate(-30deg); }
+.jar-lid.closing { animation: lid-off 1s cubic-bezier(.45,.05,.3,1) reverse both; }
+/* turning: the lid twists side to side and rises a little with each turn, then lifts away */
+@keyframes lid-off {
+  0% { transform: none; }
+  12% { transform: translateY(-1px) rotate(-5deg) scaleX(0.96); }
+  24% { transform: translateY(-3px) rotate(4deg) scaleX(1); }
+  36% { transform: translateY(-5px) rotate(-5deg) scaleX(0.96); }
+  48% { transform: translateY(-8px) rotate(4deg) scaleX(1); }
+  60% { transform: translateY(-11px) rotate(-5deg) scaleX(0.96); }
+  72% { transform: translateY(-18px) rotate(2deg); }
+  100% { transform: translate(-96px, -20px) rotate(-30deg); }
+}
+.jar-fly { position: absolute; left: 118px; top: 70px; width: 44px; height: 28px; border: 1.5px solid var(--ink); border-radius: 4px; z-index: 5; pointer-events: none; animation: note-out 0.7s cubic-bezier(.2,.8,.3,1) both; }
+@keyframes note-out { 0% { transform: translateY(30px) rotate(0); opacity: 1; } 70% { transform: translateY(-70px) rotate(-12deg) scale(1.5); opacity: 1; } 100% { transform: translateY(-90px) rotate(-6deg) scale(2.2); opacity: 0; } }
+.jar-card { animation: note-open 0.42s cubic-bezier(.2,.9,.3,1.1) both; background: color-mix(in srgb, var(--butter) 30%, var(--card)); }
+@keyframes note-open { 0% { transform: scaleY(0.15) scaleX(0.4); opacity: 0; } 60% { opacity: 1; } 100% { transform: none; } }
+.jar-row { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; background: var(--card); border: 1px solid var(--ink); border-radius: 14px; text-decoration: none; color: inherit; }
+.jar-row-chit { flex: 0 0 22px; height: 15px; margin-top: 4px; border: 1.5px solid var(--ink); border-radius: 3px; background: var(--butter); transform: rotate(-6deg); }
+/* the jar switch on the writing page, and a tiny jar drawing */
+.jar-toggle { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; background: var(--card); border: 1px dashed var(--ink); border-radius: 14px; }
+.jar-toggle.on { border-style: solid; background: color-mix(in srgb, var(--butter) 40%, var(--card)); }
+.jar-toggle strong { font-size: 14px; font-weight: 600; }
+.jar-toggle.on .switch { background-color: var(--lilac); }
+.jar-toggle.on .switch span { transform: translateX(22px); }
+.jar-mini { position: relative; display: inline-block; flex: 0 0 26px; width: 26px; height: 30px; border: 1.5px solid var(--ink); border-radius: 4px 4px 9px 9px; background: color-mix(in srgb, var(--blue) 40%, transparent); }
+.jar-mini::before { content: ""; position: absolute; left: 2px; right: 2px; top: -7px; height: 6px; border: 1.5px solid var(--ink); border-radius: 3px; background: var(--butter); }
+.jar-mini i { position: absolute; left: 5px; bottom: 4px; width: 12px; height: 7px; border: 1px solid var(--ink); border-radius: 2px; background: var(--butter); transform: rotate(-10deg); }
+.jar-art { display: flex; align-items: center; justify-content: center; }
+@media (prefers-reduced-motion: reduce) { .jar-lid.opening, .jar-lid.closing, .jar-fly, .jar-card { animation-duration: 0.01s; } }
+.board-screen .board-wrap { width: 100%; max-width: 100vw; overflow: hidden; }
+.board-screen .board-undo { position: fixed; top: calc(env(safe-area-inset-top) + 78px); right: 12px; }

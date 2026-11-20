@@ -102,6 +102,7 @@ export class LocalStore implements Store {
       topics: t.topics ?? [],
       thread_id: t.thread_id ?? null,
       interest_id: t.interest_id ?? null,
+      jar: !!t.jar,
       source: null,
       created_at: now(),
       updated_at: now(),

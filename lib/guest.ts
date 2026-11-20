@@ -5,7 +5,7 @@
 const GUEST = "strata:guest";
 const PENDING = "strata:pending";
 
-export type Pending = { body: string; topics: string[]; kind: "card" | "page"; finished: boolean; interest_id: string | null; thread_id: string | null };
+export type Pending = { body: string; topics: string[]; kind: "card" | "page"; finished: boolean; interest_id: string | null; thread_id: string | null; jar?: boolean };
 
 export function isGuest() {
   try {

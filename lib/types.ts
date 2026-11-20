@@ -14,6 +14,8 @@ export type Thought = {
   interest_id?: string | null;
   /** the collection this thought is about (it stays in Thoughts; the collection lists it under "Your thoughts") */
   collection_id?: string | null;
+  /** a note in the gratitude jar: sorted by being there, no thread or collection needed */
+  jar?: boolean;
   /** "letterboxd" or "goodreads" when it came in with an import */
   source?: string | null;
   created_at: string;

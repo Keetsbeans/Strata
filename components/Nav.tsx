@@ -10,6 +10,7 @@ const items = [
   { href: "/thoughts/", label: "Thoughts", also: ["/thought/", "/threads/", "/thread/", "/discarded/", "/review/", "/stack/"] },
   { href: "/new/", label: "New thought", plus: true, also: ["/write/"] },
   { href: "/collections/", label: "Collections", also: ["/interests/", "/interest/", "/collection/", "/import/"] },
+  { href: "/jar/", label: "Jar" },
 ];
 
 export default function Nav() {
