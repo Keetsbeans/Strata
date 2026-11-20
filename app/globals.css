@@ -670,9 +670,12 @@ button.mood { min-height: 44px; padding: 0 12px; font-size: 12px; }
 .timer-card { animation: paper-up 0.42s var(--ease-paper) both; }
 
 /* thread timeline: a thought linked under another sits indented beneath it */
-.timeline li.under { margin-left: 26px; }
-.timeline li.under .tl-dot { width: 9px; height: 9px; margin: 18px 0 0 1.5px; }
-.timeline li.under::after { content: ""; position: absolute; left: -20px; top: -12px; width: 22px; height: 34px; border-left: 1px dashed var(--ink); border-bottom: 1px dashed var(--ink); border-bottom-left-radius: 10px; }
+/* the main line runs straight down past it; a short elbow tucks it in under its thought */
+.timeline li.under::before { top: -2px; }
+.timeline li.under > .card { margin-left: 24px; }
+.timeline li.under::after { content: ""; position: absolute; left: 7px; top: 26px; width: 40px; border-top: 1px dashed var(--ink); pointer-events: none; }
+.timeline li.under .tl-dot { visibility: hidden; }
+.timeline li.under > .card::before { content: ""; position: absolute; left: -5px; top: 21px; width: 9px; height: 9px; border-radius: 50%; border: 1px dashed var(--ink); background: var(--paper); }
 .tl-linkhere { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: -6px 0 -12px -2px; padding: 0 4px; background: none; border: 0; font: inherit; font-size: 12.5px; font-weight: 500; color: var(--muted); cursor: pointer; }
 .tl-linkhere:hover { color: var(--ink); }
 .label-chip { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; margin: -8px 0; text-decoration: none; color: var(--ink); }
