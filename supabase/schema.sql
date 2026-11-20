@@ -463,3 +463,29 @@ alter table public.thoughts add column if not exists collection_id uuid referenc
 
 -- gratitude jar: a thought can sit in the jar
 alter table public.thoughts add column if not exists jar boolean not null default false;
+
+-- time capsules: the contents arrive already scrambled on the phone (AES-GCM).
+-- The server only ever sees the box, never the letter or the thoughts.
+-- key_box is the content key locked with the spare key; the spare key itself never leaves the phone.
+-- TODO before sign-in goes live: move date_key out of reach until open_at (an edge function that releases it on the day).
+create table if not exists public.capsules (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  title text not null default '' check (char_length(title) <= 120),
+  seal text not null check (seal in ('key', 'strict')),
+  open_at timestamptz not null,
+  count integer not null default 0,
+  box jsonb not null,
+  date_key text not null,
+  key_box jsonb,
+  opened_at timestamptz,
+  opened_early boolean not null default false,
+  created_at timestamptz not null default now(),
+  check (seal = 'key' or key_box is null)
+);
+alter table public.capsules enable row level security;
+drop policy if exists "own capsules" on public.capsules;
+create policy "own capsules" on public.capsules for all to authenticated
+  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+revoke all on public.capsules from anon;
+grant select, insert, update, delete on public.capsules to authenticated;

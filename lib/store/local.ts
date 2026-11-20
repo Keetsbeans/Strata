@@ -1,6 +1,6 @@
-import type { Collection, CollectionItem, Decor, ImportBatch, Interest, Placement, SavedLink, Thought, ThoughtVersion, Thread, ThreadLink } from "@/lib/types";
+import type { Collection, CollectionItem, Decor, ImportBatch, Interest, Placement, SavedLink, Thought, ThoughtVersion, Thread, ThreadLink, TimeCapsule } from "@/lib/types";
 import { DISCARD_DAYS } from "@/lib/types";
-import type { ImportResult, InterestPatch, NewInterest, NewThought, ShelfImport, Store, ThoughtPatch } from "./types";
+import type { ImportResult, InterestPatch, NewCapsule, NewInterest, NewThought, ShelfImport, Store, ThoughtPatch } from "./types";
 import { sampleData } from "./sample";
 import { isGuest } from "../guest";
 import { interestKey } from "@/lib/catalog/match";
@@ -16,6 +16,7 @@ type DB = {
   links: SavedLink[];
   threadLinks: ThreadLink[];
   imports: ImportBatch[];
+  capsules: TimeCapsule[];
 };
 const KEY = "strata:try:v1";
 
@@ -28,7 +29,7 @@ function load(): DB {
     const raw = localStorage.getItem(KEY);
     // try-outs started before stage 2 have no interests, collections or links yet
     if (raw) {
-      const db: DB = { interests: [], collections: [], collectionItems: [], links: [], threadLinks: [], imports: [], ...JSON.parse(raw) };
+      const db: DB = { interests: [], collections: [], collectionItems: [], links: [], threadLinks: [], imports: [], capsules: [], ...JSON.parse(raw) };
       db.interests = db.interests.map((i: Interest) => ({ ...i, genres: i.genres ?? [] }));
       // collections now hold saved things only; thoughts that sat in one stay where they are
       db.collectionItems = db.collectionItems.filter((x) => x.interest_id);
@@ -254,6 +255,29 @@ export class LocalStore implements Store {
       const hay = (t.body + " " + t.topics.join(" ")).toLowerCase();
       return words.every((w) => hay.includes(w));
     });
+  }
+  async capsules() {
+    return [...this.db.capsules].sort((a, b) => a.open_at.localeCompare(b.open_at));
+  }
+  async capsule(id: string) {
+    return this.db.capsules.find((c) => c.id === id) ?? null;
+  }
+  async addCapsule(c: NewCapsule) {
+    const cap: TimeCapsule = { ...c, id: uid(), created_at: now(), opened_at: null, opened_early: false };
+    this.db.capsules.push(cap);
+    this.write();
+    return cap;
+  }
+  async markCapsuleOpened(id: string, early: boolean) {
+    const c = this.db.capsules.find((x) => x.id === id);
+    if (!c || c.opened_at) return;
+    c.opened_at = now();
+    c.opened_early = early;
+    this.write();
+  }
+  async deleteCapsule(id: string) {
+    this.db.capsules = this.db.capsules.filter((c) => c.id !== id);
+    this.write();
   }
   async exportAll() {
     return { exported_at: now(), ...this.db };

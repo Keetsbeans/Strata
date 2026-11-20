@@ -1,4 +1,4 @@
-import type { Collection, CollectionItem, ImportBatch, Interest, SavedLink, Thought, Thread, ThreadLink } from "@/lib/types";
+import type { Collection, CollectionItem, ImportBatch, Interest, SavedLink, Thought, Thread, ThreadLink, TimeCapsule } from "@/lib/types";
 
 /** A few example thoughts so the try-out mode doesn't open empty. */
 export function sampleData() {
@@ -57,5 +57,5 @@ export function sampleData() {
   const links: SavedLink[] = [
     { id: "l1", url: "https://en.wikipedia.org/wiki/Slow_living", title: "Slow living - Wikipedia", note: "", created_at: ago(1, 18, 0) },
   ];
-  return { thoughts, threads: [thread], versions: [], interests, collections, collectionItems, links, threadLinks: [{ id: "sl1", thread_id: thread.id, thought_id: "s5", added_at: ago(3, 10, 0) }] as ThreadLink[], imports: [] as ImportBatch[] };
+  return { thoughts, threads: [thread], versions: [], interests, collections, collectionItems, links, threadLinks: [{ id: "sl1", thread_id: thread.id, thought_id: "s5", added_at: ago(3, 10, 0) }] as ThreadLink[], imports: [] as ImportBatch[], capsules: [] as TimeCapsule[] };
 }

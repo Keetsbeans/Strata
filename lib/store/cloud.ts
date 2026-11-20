@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Collection, CollectionItem, Decor, ImportBatch, Interest, Placement, SavedLink, Thought, ThoughtVersion, Thread, ThreadLink } from "@/lib/types";
-import type { ImportResult, InterestPatch, NewInterest, NewThought, ShelfImport, Store, ThoughtPatch } from "./types";
+import type { Collection, CollectionItem, Decor, ImportBatch, Interest, Placement, SavedLink, Thought, ThoughtVersion, Thread, ThreadLink, TimeCapsule } from "@/lib/types";
+import type { ImportResult, InterestPatch, NewCapsule, NewInterest, NewThought, ShelfImport, Store, ThoughtPatch } from "./types";
 import { interestKey } from "@/lib/catalog/match";
 
 /** Your real archive on Supabase. Row level security in the database makes sure only you can read or change your rows. */
@@ -103,8 +103,25 @@ export class CloudStore implements Store {
     }
     return this.ok<Thought[]>(query.order("created_at", { ascending: false }).limit(100));
   }
+  // ---------- time capsules ----------
+  async capsules() {
+    return this.ok<TimeCapsule[]>(this.sb.from("capsules").select("*").order("open_at", { ascending: true }));
+  }
+  async capsule(id: string) {
+    return this.ok<TimeCapsule | null>(this.sb.from("capsules").select("*").eq("id", id).maybeSingle());
+  }
+  async addCapsule(c: NewCapsule) {
+    return this.ok<TimeCapsule>(this.sb.from("capsules").insert(c).select().single());
+  }
+  async markCapsuleOpened(id: string, early: boolean) {
+    await this.ok(this.sb.from("capsules").update({ opened_at: new Date().toISOString(), opened_early: early }).eq("id", id).is("opened_at", null));
+  }
+  async deleteCapsule(id: string) {
+    await this.ok(this.sb.from("capsules").delete().eq("id", id));
+  }
+
   async exportAll() {
-    const [thoughts, threads, versions, interests, collections, collectionItems, links, threadLinks, imports] = await Promise.all([
+    const [thoughts, threads, versions, interests, collections, collectionItems, links, threadLinks, imports, capsules] = await Promise.all([
       this.ok<Thought[]>(this.sb.from("thoughts").select("*")),
       this.ok<Thread[]>(this.sb.from("threads").select("*")),
       this.ok<ThoughtVersion[]>(this.sb.from("thought_versions").select("*")),
@@ -114,8 +131,10 @@ export class CloudStore implements Store {
       this.ok<SavedLink[]>(this.sb.from("saved_links").select("*")),
       this.ok<ThreadLink[]>(this.sb.from("thread_links").select("*")),
       this.ok<ImportBatch[]>(this.sb.from("imports").select("*")),
+      this.ok<TimeCapsule[]>(this.sb.from("capsules").select("*")),
     ]);
-    return { exported_at: new Date().toISOString(), thoughts, threads, versions, interests, collections, collectionItems, links, threadLinks, imports };
+    // capsules leave still scrambled; only Strata on your phone can open them
+    return { exported_at: new Date().toISOString(), thoughts, threads, versions, interests, collections, collectionItems, links, threadLinks, imports, capsules };
   }
 
   // ---------- interests ----------

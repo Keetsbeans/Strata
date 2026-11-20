@@ -7,6 +7,8 @@ import { useData } from "@/lib/useData";
 import type { InterestKind, SavedLink } from "@/lib/types";
 import { KIND_LABEL } from "@/lib/types";
 import { comingBack } from "@/lib/inbox";
+import { isReady, whatsInside } from "@/lib/capsule";
+import { CapsuleArt, longDay } from "@/components/Capsule";
 import { day, relDay, sameDay, time } from "@/lib/dates";
 import { firstUrl, hostOf, linkPicture, recognise } from "@/lib/catalog/links";
 import Nav from "@/components/Nav";
@@ -42,8 +44,8 @@ function Inbox() {
   const router = useRouter();
   const params = useSearchParams();
   const { data, error, reload } = useData(async () => {
-    const [thoughts, interests, links, imports] = await Promise.all([store.thoughts(), store.interests(), store.links(), store.imports()]);
-    return { thoughts, interests, links, imports: imports.filter((b) => !b.done_at) };
+    const [thoughts, interests, links, imports, capsules] = await Promise.all([store.thoughts(), store.interests(), store.links(), store.imports(), store.capsules()]);
+    return { thoughts, interests, links, imports: imports.filter((b) => !b.done_at), capsules: capsules.filter((c) => !c.opened_at && isReady(c)) };
   }, [store]);
   const [hidden, setHidden] = useState<string[]>([]);
   const [tab, setTab] = useState<"back" | "sort" | null>(params.get("tab") === "sort" ? "sort" : null);
@@ -64,7 +66,8 @@ function Inbox() {
   const back = comingBack(data.thoughts, data.interests);
   const yearAgo = back.yearAgo.filter((t) => !hidden.includes(t.id));
   const waiting = back.waiting.filter((i) => !hidden.includes(i.id));
-  const backCount = yearAgo.length + waiting.length;
+  const caps = data.capsules;
+  const backCount = caps.length + yearAgo.length + waiting.length;
   const sortCount = data.links.length + data.imports.length;
   const shown = tab ?? (backCount || !sortCount ? "back" : "sort");
 
@@ -120,10 +123,29 @@ function Inbox() {
 
             {shown === "back" && (
               <section className="stack" style={{ gap: 12 }}>
-                <div className="between">
-                  <h2 style={{ fontSize: 17 }}>Also today</h2>
-                  <span className="small muted">Picked by dates, never by AI</span>
-                </div>
+                {caps.length > 0 && (
+                  <>
+                    <h2 style={{ fontSize: 17 }}>Time capsules</h2>
+                    {caps.map((c) => (
+                      <Link key={c.id} href={`/capsule/?id=${c.id}`} className="card cap-row ready">
+                        <span className="row" style={{ gap: 12 }}>
+                          <CapsuleArt c={c} size={52} state="ready" />
+                          <span className="stack grow" style={{ gap: 2 }}>
+                            <strong className="cap-title">{c.title}</strong>
+                            <span className="small muted">Sealed {longDay(c.created_at)} · {whatsInside(c)}</span>
+                          </span>
+                          <span className="tag sm butter">Open</span>
+                        </span>
+                      </Link>
+                    ))}
+                  </>
+                )}
+                {(yearAgo.length > 0 || waiting.length > 0 || caps.length === 0) && (
+                  <div className="between">
+                    <h2 style={{ fontSize: 17 }}>Also today</h2>
+                    <span className="small muted">Picked by dates, never by AI</span>
+                  </div>
+                )}
                 {yearAgo.map((t) => {
                   const years = new Date().getFullYear() - new Date(t.created_at).getFullYear();
                   return (
