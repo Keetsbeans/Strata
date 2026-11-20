@@ -11,7 +11,6 @@ import ThoughtTabs from "@/components/ThoughtTabs";
 import Toast from "@/components/Toast";
 import ThreadPicker from "@/components/ThreadPicker";
 import Mascot from "@/components/Mascot";
-import PickUpRow from "@/components/PickUpRow";
 import ThoughtDeck from "@/components/ThoughtDeck";
 import ThoughtMenu from "@/components/ThoughtMenu";
 import Icon from "@/components/Icon";
@@ -126,7 +125,6 @@ function Thoughts() {
             <TopIcons />
           )}
         </header>
-        {filter === "all" && !dayParam && !selecting && <PickUpRow thoughts={data} small onViewMore={() => listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} />}
         <ThoughtTabs on={filter} unsorted={unsorted.length} unfinished={unfinished.length} />
         {dayParam && (
           <Link href="/thoughts/" className="small" style={{ fontWeight: 600 }}>

@@ -55,8 +55,16 @@ export default function ThoughtDeck({
   const step = () => setDone((d) => [...d, t.id]);
   useEffect(() => setTopics(t?.topics ?? []), [t]);
 
+  // a short line after each swipe saying where the card went
+  const [flash, setFlash] = useState("");
+  useEffect(() => {
+    if (!flash) return;
+    const id = setTimeout(() => setFlash(""), 2600);
+    return () => clearTimeout(id);
+  }, [flash]);
   const keep = async () => {
     await store.updateThought(t.id, topics.length ? { topics, kept: true } : { kept: true });
+    setFlash("Kept. It stays in All, and leaves Unsorted.");
     step();
   };
   const discard = async () => {
@@ -64,7 +72,7 @@ export default function ThoughtDeck({
     onDiscard(t);
     step();
   };
-  const later = () => step();
+  const later = () => (setFlash("Left in Unsorted for later."), step());
 
   if (!t)
     return (
@@ -125,9 +133,15 @@ export default function ThoughtDeck({
           </Link>
         </SwipeCard>
       </div>
-      <p className="small muted swipe-help">
-        {pile.length - left.length + 1} of {pile.length} ·{" "}
-        <button className="link small" onClick={() => setGuide(true)}>How does this work?</button>
+      <p className="small muted swipe-help" role="status">
+        {flash ? (
+          <span className="swipe-flash">{flash}</span>
+        ) : (
+          <>
+            {pile.length - left.length + 1} of {pile.length} ·{" "}
+            <button className="link small" onClick={() => setGuide(true)}>How does this work?</button>
+          </>
+        )}
       </p>
       <div className="review-actions">
         <button className="btn sm act no" onClick={discard}><Icon name="swipe-left" size={17} />Discard</button>

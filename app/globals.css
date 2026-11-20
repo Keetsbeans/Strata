@@ -750,3 +750,5 @@ button.mood { min-height: 44px; padding: 0 12px; font-size: 12px; }
 .threads-intro { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px 6px; background: var(--blue); animation: paper-up 0.42s var(--ease-paper) both; }
 .threads-intro strong { font-size: 15px; font-weight: 600; }
 .nav { justify-content: space-around; }
+.swipe-help { min-height: 44px; display: flex; align-items: center; justify-content: center; }
+.swipe-flash { color: var(--ink); font-weight: 500; animation: paper-up 0.36s var(--ease-paper) both; }
