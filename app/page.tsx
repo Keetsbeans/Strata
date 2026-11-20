@@ -7,7 +7,7 @@ import { DAYS, MONTHS_LONG, sameDay, stamp, relDay } from "@/lib/dates";
 import Nav from "@/components/Nav";
 import Mascot from "@/components/Mascot";
 import Icon from "@/components/Icon";
-import Avatar from "@/components/Avatar";
+import Logo from "@/components/Logo";
 import { preview } from "@/components/ThoughtCard";
 import Poster from "@/components/Poster";
 import Folder from "@/components/Folder";
@@ -72,15 +72,11 @@ export default function Home() {
     <>
       <header className="dark home-head">
         <div className="between">
-          <span style={{ fontSize: 15, color: "var(--on-dark)" }}>{first ? "Welcome" : hello}</span>
-          <span className="row" style={{ gap: 8 }}>
-            <TopIcons dark />
-            <Link href="/profile/" className="profile-btn" aria-label="Your profile">
-              <Avatar size={44} />
-            </Link>
-          </span>
+          <Logo dark />
+          <TopIcons dark />
         </div>
-        <h1 style={{ fontSize: 30, lineHeight: 1.08, letterSpacing: "-0.02em", margin: "10px 0 18px" }}>
+        <span style={{ display: "block", fontSize: 15, color: "var(--on-dark)", marginTop: 14 }}>{first ? "Welcome" : hello}</span>
+        <h1 style={{ fontSize: 30, lineHeight: 1.08, letterSpacing: "-0.02em", margin: "4px 0 18px" }}>
           {first ? (
             <>
               Nothing here yet.

@@ -284,13 +284,19 @@ try {
   ok(await seen(page.getByRole("tab", { name: /Unsorted/ })), "filters are tabs, not buttons");
   ok(!(await page.getByRole("tab", { name: "Threads" }).count()), "Threads isn't a tab any more; it's in the bottom bar");
   const navNames = await page.getByRole("navigation", { name: "Main" }).getByRole("link").evaluateAll((els) => els.map((e) => e.getAttribute("aria-label") || e.textContent.trim()));
-  ok(navNames.join(",") === "Home,Thoughts,New thought,Collections", "bottom bar is Home, Thoughts, +, Collections: " + navNames.join(","));
-  await page.getByRole("navigation", { name: "Main" }).getByRole("button", { name: "More" }).click();
-  const drawer = page.getByRole("dialog", { name: "More" });
-  ok(await seen(drawer.getByRole("link", { name: /Threads/ })), "More opens a drawer with Threads");
+  ok(navNames.join(",") === "Home,Threads,New thought,Thoughts,Collections", "bottom bar is Home, Threads, +, Thoughts, Collections: " + navNames.join(","));
+  ok(!(await page.getByRole("navigation", { name: "Main" }).getByRole("button").count()), "no More in the bottom bar");
+  await page.locator("header").getByRole("button", { name: "Menu" }).click();
+  const drawer = page.getByRole("dialog", { name: "Menu" });
+  ok(await seen(drawer.getByRole("link", { name: /Threads/ })), "the menu opens a drawer with Threads");
   ok(await seen(drawer.getByText("Time capsules")), "and a place for time capsules");
-  await page.waitForTimeout(450);
+  ok(await seen(page.locator("header").getByRole("button", { name: "Close the menu" })), "the menu button turns into a close cross");
+  await page.waitForTimeout(650);
   await shot("05c2-drawer");
+  await page.locator("header").getByRole("button", { name: "Close the menu" }).click();
+  await drawer.waitFor({ state: "detached" });
+  ok(true, "and closes the drawer again");
+  await page.locator("header").getByRole("button", { name: "Menu" }).click();
   await drawer.getByRole("link", { name: /Threads/ }).click();
   await page.waitForURL(/\/threads\//);
   ok(true, "Threads opens from the drawer");
@@ -473,7 +479,9 @@ try {
   await shot("09-home");
 
   console.log("Profile, settings and colour themes");
-  await page.getByRole("link", { name: "Your profile" }).click();
+  ok(await seen(page.locator("header").getByRole("img", { name: "Strata" })), "Home shows the Strata logo at the top left");
+  await page.locator("header").getByRole("button", { name: "Menu" }).click();
+  await page.getByRole("dialog", { name: "Menu" }).getByRole("link", { name: /Your profile|Profile and export/ }).click();
   await page.waitForURL(/\/profile\//);
   await page.getByRole("button", { name: "Add a name" }).click();
   await page.getByLabel("Your name").fill("Chris");
@@ -553,7 +561,7 @@ try {
   await go("/");
   ok(await seen(page.getByText("It all lands at once.")), "people already set up see the opening screens once on Home");
   await page.getByRole("button", { name: "Skip" }).click();
-  ok(await seen(page.getByRole("link", { name: "Your profile" })), "Skip goes to Home");
+  ok(await seen(page.locator("header").getByRole("button", { name: "Menu" })), "Skip goes to Home");
   await go("/profile/");
   await page.getByRole("button", { name: /Watch the intro again/ }).click();
   ok(await seen(page.getByText("It all lands at once.")), "Profile can replay the intro");

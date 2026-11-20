@@ -6,20 +6,16 @@ import { getName } from "@/lib/profile";
 import Icon from "./Icon";
 import Mascot from "./Mascot";
 
-/** The More drawer: everything that doesn't need a place in the bottom bar. Slides in from the right. */
-export default function Drawer({ onClose }: { onClose: () => void }) {
+/** The menu drawer: everything that doesn't need a place in the bottom bar. Slides in from the right; the menu button above it turns into the close cross. */
+export default function Drawer({ closing, onClose }: { closing: boolean; onClose: () => void }) {
   const { store } = useApp();
-  const [closing, setClosing] = useState(false);
   const [threads, setThreads] = useState<number | null>(null);
   const [name, setName] = useState("");
   useEffect(() => {
     setName(getName());
     store.threads().then((t) => setThreads(t.length)).catch(() => {});
   }, [store]);
-  const close = () => {
-    setClosing(true);
-    setTimeout(onClose, 220);
-  };
+  const close = onClose;
   useEffect(() => {
     const key = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", key);
@@ -41,8 +37,8 @@ export default function Drawer({ onClose }: { onClose: () => void }) {
   );
   return (
     <>
-      <div className={"scrim fade" + (closing ? " out" : "")} onClick={close} />
-      <aside className={"drawer" + (closing ? " out" : "")} role="dialog" aria-modal="true" aria-label="More">
+      <div className={"scrim fade slow" + (closing ? " out" : "")} onClick={close} />
+      <aside className={"drawer" + (closing ? " out" : "")} id="menu-drawer" role="dialog" aria-label="Menu">
         <div className="between">
           <Link href="/profile/" className="drawer-me" onClick={close}>
             <Mascot size={44} eyes="happy" arms="wave" />
@@ -51,11 +47,9 @@ export default function Drawer({ onClose }: { onClose: () => void }) {
               <span className="small muted">Profile and export</span>
             </span>
           </Link>
-          <button className="icon-btn round" aria-label="Close" onClick={close}>
-            <Icon name="close" size={18} />
-          </button>
+          <span style={{ width: 52 }} aria-hidden="true" />
         </div>
-        <nav className="stack" style={{ gap: 6 }} aria-label="More">
+        <nav className="stack" style={{ gap: 6 }} aria-label="Menu">
           {row("/threads/", "thread", "Threads", "One idea, followed over time", threads)}
           <div className="drawer-row soon" aria-disabled="true">
             <span className="drawer-ic"><Icon name="clock" size={19} /></span>

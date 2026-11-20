@@ -4,10 +4,18 @@ import { useEffect, useState } from "react";
 import { useApp } from "@/app/providers";
 import Icon from "./Icon";
 import { SearchPanel } from "./SearchPanel";
+import Drawer from "./Drawer";
 
-/** Search and Inbox, as two icons at the top right. Search slides in over the screen. */
+/** Search, Inbox and the menu, at the top right. Search slides in over the screen; the menu opens a drawer from the right. */
 export default function TopIcons({ dark }: { dark?: boolean }) {
   const { store } = useApp();
+  const [menu, setMenu] = useState<"" | "open" | "closing">("");
+  const toggleMenu = () => {
+    if (menu === "open") {
+      setMenu("closing");
+      setTimeout(() => setMenu(""), 380);
+    } else if (!menu) setMenu("open");
+  };
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
   const [waiting, setWaiting] = useState(0);
@@ -39,7 +47,18 @@ export default function TopIcons({ dark }: { dark?: boolean }) {
           <Icon name="inbox" size={19} />
           {waiting > 0 && <span className="badge-dot" aria-hidden="true" />}
         </Link>
+        <button
+          className={"menu-btn" + (dark ? " on-dark" : "") + (menu === "open" ? " open" : "") + (menu === "closing" ? " shut" : "")}
+          aria-label={menu === "open" ? "Close the menu" : "Menu"}
+          aria-expanded={menu === "open"}
+          aria-controls="menu-drawer"
+          onClick={toggleMenu}
+        >
+          <i />
+          <i />
+        </button>
       </span>
+      {menu && <Drawer closing={menu === "closing"} onClose={toggleMenu} />}
       {open && (
         <>
           <div className={"scrim fade" + (closing ? " out" : "")} onClick={close} />
