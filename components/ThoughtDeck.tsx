@@ -10,6 +10,7 @@ import Mascot from "./Mascot";
 import Buddy from "./Buddy";
 import SwipeCard from "./SwipeCard";
 import { preview } from "./ThoughtCard";
+import { tipSeen } from "@/lib/tips";
 
 /**
  * Thoughts as a deck of cards, one at a time.
@@ -38,10 +39,16 @@ export default function ThoughtDeck({
   const [lean, setLean] = useState(0);
   // the first time someone flips through, show what each direction does
   const [guide, setGuide] = useState(false);
+  // it waits until the page's own tips are done, so two overlays never stack
   useEffect(() => {
-    try {
-      if (!localStorage.getItem("strata:swipe-guide")) setGuide(true);
-    } catch {}
+    const check = () => {
+      try {
+        if (!localStorage.getItem("strata:swipe-guide") && tipSeen("thoughts")) setGuide(true);
+      } catch {}
+    };
+    check();
+    window.addEventListener("strata:tip-done", check);
+    return () => window.removeEventListener("strata:tip-done", check);
   }, []);
   const doneGuide = () => {
     setGuide(false);
@@ -56,15 +63,17 @@ export default function ThoughtDeck({
   useEffect(() => setTopics(t?.topics ?? []), [t]);
 
   // a short line after each swipe saying where the card went
-  const [flash, setFlash] = useState("");
+  // after Keep, the line offers the thread picker for that card, without forcing it
+  const [flash, setFlashRaw] = useState<{ text: string; kept?: Thought } | null>(null);
+  const setFlash = (text: string, kept?: Thought) => setFlashRaw({ text, kept });
   useEffect(() => {
     if (!flash) return;
-    const id = setTimeout(() => setFlash(""), 2600);
+    const id = setTimeout(() => setFlashRaw(null), flash.kept ? 5000 : 2600);
     return () => clearTimeout(id);
   }, [flash]);
   const keep = async () => {
     await store.updateThought(t.id, topics.length ? { topics, kept: true } : { kept: true });
-    setFlash("Kept. It stays in All, and leaves Unsorted.");
+    setFlash("Kept, and sorted.", t);
     step();
   };
   const discard = async () => {
@@ -135,7 +144,17 @@ export default function ThoughtDeck({
       </div>
       <p className="small muted swipe-help" role="status">
         {flash ? (
-          <span className="swipe-flash">{flash}</span>
+          <span className="swipe-flash">
+            {flash.text}
+            {flash.kept && (
+              <>
+                {" "}
+                <button className="link small" style={{ minHeight: 44, fontWeight: 600 }} onClick={() => (onPin(flash.kept!), setFlashRaw(null))}>
+                  Add it to a thread?
+                </button>
+              </>
+            )}
+          </span>
         ) : (
           <>
             {pile.length - left.length + 1} of {pile.length} ·{" "}

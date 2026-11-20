@@ -6,6 +6,7 @@ import { useApp } from "../providers";
 import Icon from "@/components/Icon";
 import { THEMES, getTheme, setTheme, type ThemeId } from "@/lib/theme";
 import { getVoiceMode, liveSupported, setVoiceMode } from "@/lib/voice";
+import { setTips, tipsOn } from "@/lib/tips";
 import { addFingerprint, fingerprintEnabled, fingerprintSupported, lockEnabled, removeFingerprint, setPin, turnOffLock } from "@/lib/lock";
 
 function Switch({ on, onChange, label }: { on: boolean; onChange: () => void; label: string }) {
@@ -34,6 +35,7 @@ export default function Settings() {
   const [lock, setLock] = useState(false);
   const [finger, setFinger] = useState(false);
   const [tick, setTick] = useState(true);
+  const [tips, setTips_] = useState(false);
   const [alwaysCard, setAlwaysCard] = useState(false);
   const [live, setLive] = useState(false);
   const [canLive, setCanLive] = useState(false);
@@ -51,6 +53,7 @@ export default function Settings() {
     try {
       setTick(localStorage.getItem("strata:tick") !== "off");
       setAlwaysCard(localStorage.getItem("strata:always-card") === "1");
+      setTips_(tipsOn());
     } catch {}
   }, []);
 
@@ -166,6 +169,9 @@ export default function Settings() {
         </Row>
         <Row title="Always start with a card" sub="Skip the card or page question">
           <Switch label="Always start with a card" on={alwaysCard} onChange={() => (flag("strata:always-card", alwaysCard ? null : "1"), setAlwaysCard(!alwaysCard))} />
+        </Row>
+        <Row title="Show tips again" sub={tips ? "Each page shows its short guide the next time you open it" : "The short guide on each page, from the start"}>
+          <Switch label="Show tips again" on={tips} onChange={() => (setTips(!tips), setTips_(!tips))} />
         </Row>
         {canLive && (
           <Row

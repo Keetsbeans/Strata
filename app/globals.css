@@ -752,3 +752,22 @@ button.mood { min-height: 44px; padding: 0 12px; font-size: 12px; }
 .nav { justify-content: space-around; }
 .swipe-help { min-height: 44px; display: flex; align-items: center; justify-content: center; }
 .swipe-flash { color: var(--ink); font-weight: 500; animation: paper-up 0.36s var(--ease-paper) both; }
+/* board tools sit on the board itself, so they're always in reach */
+.board-wrap { position: relative; }
+.board-tools { position: absolute; top: 6px; left: 0; right: 0; z-index: 5; display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; padding: 0 16px; pointer-events: none; }
+.board-tools::-webkit-scrollbar { display: none; }
+.board-tools .pill { pointer-events: auto; }
+.board-tools .pill > span { box-shadow: 2px 2px 0 var(--ink); }
+.board { contain: strict; height: calc(100dvh - 300px); min-height: 320px; max-height: 560px; }
+.board-world { will-change: transform; }
+/* first-visit guides: the page dims, one thing stays lit, a note explains it */
+.tip-layer { position: fixed; inset: 0; z-index: 70; animation: fade-in 0.22s ease both; }
+.tip-spot { position: fixed; border-radius: 18px; box-shadow: 0 0 0 9999px rgba(21, 21, 21, 0.6); outline: 2px dashed var(--butter); outline-offset: 3px; transition: all 0.38s var(--ease-paper); pointer-events: none; }
+.tip-card { position: fixed; left: 16px; right: 16px; max-width: 448px; margin: 0 auto; background: var(--card); color: var(--ink); border: 1px solid var(--ink); border-radius: 18px; box-shadow: 3px 3px 0 var(--ink); padding: 14px 14px 6px 14px; display: flex; flex-direction: column; gap: 10px; animation: paper-up 0.36s var(--ease-paper) both; }
+.tip-path { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px; background: var(--paper); border: 1px dashed var(--line, #c9c4b8); }
+.tip-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border: 1px solid var(--ink); border-radius: 999px; background: var(--card); font-weight: 600; font-size: 12px; }
+.tip-burger { display: inline-flex; flex-direction: column; gap: 3px; width: 12px; }
+.tip-burger i { display: block; height: 1.6px; background: currentColor; border-radius: 2px; }
+.tip-dots { display: flex; gap: 5px; }
+.tip-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--ink); opacity: 0.25; transition: opacity 0.2s, width 0.2s; }
+.tip-dots i.on { opacity: 1; width: 16px; border-radius: 4px; }

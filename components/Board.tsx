@@ -28,11 +28,45 @@ type Thing = { x: CollectionItem; it: Interest };
 type Spot = { x: number; y: number; r: number; z: number };
 type Grab = { kind: "item" | "decor"; id: string; dx: number; dy: number };
 
-export default function Board({ store, collectionId, things, decor, onDecor, center }: { store: Store; collectionId: string; things: Thing[]; decor: Decor[]; onDecor: (d: Decor[]) => void; center?: React.MutableRefObject<() => { x: number; y: number }> }) {
+/** how far things can be dragged, in board units: big enough to spread out, small enough to never get lost */
+const LIMIT = { min: -600, max: 3000 };
+const inside = (v: number) => Math.min(LIMIT.max, Math.max(LIMIT.min, Number.isFinite(v) ? v : 0));
+
+export default function Board({ store, collectionId, things, decor, onDecor, center, tools }: { store: Store; collectionId: string; things: Thing[]; decor: Decor[]; onDecor: (d: Decor[]) => void; center?: React.MutableRefObject<() => { x: number; y: number }>; tools?: React.ReactNode }) {
   const router = useRouter();
   const view = useRef<HTMLDivElement>(null);
-  const [cam, setCam] = useState({ x: 0, y: 0, s: 0.62 });
+  const [cam, setCamRaw] = useState({ x: 0, y: 0, s: 0.62 });
+  // the view can't drift so far that everything is off screen, and never takes a broken number
+  const setCam = (next: { x: number; y: number; s: number } | ((c: { x: number; y: number; s: number }) => { x: number; y: number; s: number })) =>
+    setCamRaw((c) => {
+      const n = typeof next === "function" ? next(c) : next;
+      if (![n.x, n.y, n.s].every(Number.isFinite)) return c;
+      const r = view.current?.getBoundingClientRect();
+      if (!r) return n;
+      // keep at least one real thing in sight, clear of the tools and the bottom bar:
+      // if nothing would show, slide the view just far enough to bring the nearest one back
+      const all = [...Object.values(spotsRef.current), ...decor];
+      if (!all.length) return n;
+      // most of the item must show, below the tools and above the bottom bar
+      const top = 56, bottom = Math.min(r.height, window.innerHeight - r.top - 110) - 8;
+      const shift = (lo: number, hi: number, a: number, b: number) => {
+        const keep = Math.min((hi - lo) * 0.7, (b - a) / 2);
+        return hi < a + keep ? a + keep - hi : lo > b - keep ? b - keep - lo : 0;
+      };
+      let best = { dx: 0, dy: 0, d: Infinity };
+      for (const a of all) {
+        const dx = shift(a.x * n.s + n.x, (a.x + W) * n.s + n.x, 0, r.width);
+        const dy = shift(a.y * n.s + n.y, (a.y + H) * n.s + n.y, top, bottom);
+        const d = Math.abs(dx) + Math.abs(dy);
+        if (d < best.d) best = { dx, dy, d };
+        if (!d) break;
+      }
+      const x = n.x + best.dx, y = n.y + best.dy;
+      return { s: n.s, x, y };
+    });
+  const spotsRef = useRef<Record<string, Spot>>({});
   const [spots, setSpots] = useState<Record<string, Spot>>({});
+  spotsRef.current = spots;
   const [moving, setMoving] = useState<Grab | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
   const ptrs = useRef(new Map<number, { x: number; y: number }>());
@@ -62,7 +96,7 @@ export default function Board({ store, collectionId, things, decor, onDecor, cen
       clearTimeout(g.hold);
       const [a, b] = [...ptrs.current.values()];
       const r = view.current!.getBoundingClientRect();
-      g.pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s: cam.s, mx: (a.x + b.x) / 2 - r.left, my: (a.y + b.y) / 2 - r.top, cx: cam.x, cy: cam.y };
+      g.pinch = { d: Math.max(24, Math.hypot(a.x - b.x, a.y - b.y)), s: cam.s, mx: (a.x + b.x) / 2 - r.left, my: (a.y + b.y) / 2 - r.top, cx: cam.x, cy: cam.y };
       g.grab = null;
       setMoving(null);
       return;
@@ -104,8 +138,8 @@ export default function Board({ store, collectionId, things, decor, onDecor, cen
     if (g.grab) {
       const w = toWorld(e.clientX, e.clientY);
       const { id, kind, dx: ox, dy: oy } = g.grab;
-      if (kind === "item") setSpots((s) => ({ ...s, [id]: { ...s[id], x: w.x - ox, y: w.y - oy } }));
-      else onDecor(decor.map((d) => (d.id === id ? { ...d, x: w.x - ox, y: w.y - oy } : d)));
+      if (kind === "item") setSpots((s) => ({ ...s, [id]: { ...s[id], x: inside(w.x - ox), y: inside(w.y - oy) } }));
+      else onDecor(decor.map((d) => (d.id === id ? { ...d, x: inside(w.x - ox), y: inside(w.y - oy) } : d)));
     } else if (g.moved) {
       setCam((c) => ({ ...c, x: g.start!.cx + dx, y: g.start!.cy + dy }));
     }
@@ -157,10 +191,17 @@ export default function Board({ store, collectionId, things, decor, onDecor, cen
     setPicked(null);
   };
 
+  const fit = () => setCam({ x: 0, y: 0, s: 0.62 });
+
   return (
     <div className="board-wrap">
+      <div className="board-tools" data-tip="board-tools">
+        {tools}
+        <button className="pill" onClick={fit}><span>Back to start</span></button>
+      </div>
       <div
         className="board"
+        data-tip="board"
         ref={view}
         data-board
         onPointerDown={(e) => down(e)}

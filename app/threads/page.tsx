@@ -12,7 +12,7 @@ import Dialog from "@/components/Dialog";
 import { preview } from "@/components/ThoughtCard";
 import Mascot from "@/components/Mascot";
 import Icon from "@/components/Icon";
-import { rootOf } from "@/lib/threads";
+import { isUnsorted, rootOf } from "@/lib/threads";
 
 type Sort = "recent" | "oldest" | "most";
 const SORTS: Record<Sort, string> = { recent: "Latest thought first", oldest: "Oldest thread first", most: "Most thoughts first" };
@@ -97,7 +97,7 @@ function Threads() {
           <h1 className="h-page">Thoughts</h1>
           <TopIcons />
         </header>
-        <ThoughtTabs on="threads" unsorted={thoughts.filter((t) => t.finished && !t.topics.length && !t.kept).length} unfinished={thoughts.filter((t) => !t.finished).length} />
+        <ThoughtTabs on="threads" unsorted={thoughts.filter((t) => isUnsorted(t, links)).length} unfinished={thoughts.filter((t) => !t.finished).length} />
         {intro ? (
           <div className="card threads-intro">
             <Mascot size={52} eyes="happy" arms="wave" />

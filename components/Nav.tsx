@@ -29,6 +29,7 @@ export default function Nav() {
             key={it.href}
             href={it.href}
             aria-current={here ? "page" : undefined}
+            data-tip={it.plus ? "nav-plus" : `nav-${it.label.toLowerCase()}`}
             className={[it.plus ? "plus" : "", tapped === it.href ? "tapped" : ""].join(" ").trim() || undefined}
             aria-label={it.plus ? "New thought" : undefined}
             onClick={() => setTapped(it.href)}

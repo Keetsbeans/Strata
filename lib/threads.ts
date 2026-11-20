@@ -1,5 +1,13 @@
 import type { Thought, Thread, ThreadLink } from "@/lib/types";
 
+/**
+ * A thought is sorted once you've done anything with it: kept it, given it a topic,
+ * or put it in (or linked it to) a thread. Unsorted is everything finished that's still loose.
+ */
+export function isUnsorted(t: Thought, links: ThreadLink[]) {
+  return t.finished && !t.discarded_at && !t.topics.length && !t.kept && !t.thread_id && !links.some((l) => l.thought_id === t.id);
+}
+
 const byDate = (a: Thought, b: Thought) => a.created_at.localeCompare(b.created_at);
 
 /** the thought a thread grew from: its root_id, or for older threads the earliest thought in it */

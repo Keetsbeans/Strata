@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useSlider } from "@/lib/slide";
 
-/** the tabs on Thoughts: All, Threads, Unsorted, Unfinished. Underlined, with the line sliding to the one you pick. */
+/** the tabs on Thoughts: Unsorted, Threads, All, Unfinished. Underlined, with the line sliding to the one you pick. */
 export default function ThoughtTabs({ on, unsorted, unfinished }: { on: "all" | "unsorted" | "unfinished" | "threads"; unsorted?: number; unfinished?: number }) {
   const { ref, pos } = useSlider<HTMLElement>('[aria-selected="true"]', [on], "ttabs");
   const tab = (key: typeof on, label: string, href: string, n?: number) => (
@@ -12,10 +12,10 @@ export default function ThoughtTabs({ on, unsorted, unfinished }: { on: "all" | 
     </Link>
   );
   return (
-    <nav className="ttabs" role="tablist" aria-label="Show" ref={ref}>
-      {tab("all", "All", "/thoughts/")}
-      {tab("threads", "Threads", "/threads/")}
+    <nav className="ttabs" role="tablist" aria-label="Show" ref={ref} data-tip="tabs">
       {tab("unsorted", "Unsorted", "/thoughts/?filter=unsorted", unsorted)}
+      {tab("threads", "Threads", "/threads/")}
+      {tab("all", "All", "/thoughts/?filter=all")}
       {tab("unfinished", "Unfinished", "/thoughts/?filter=unfinished", unfinished)}
       {pos && <span className="ttabs-line" aria-hidden="true" style={{ left: pos.left, width: pos.width }} />}
     </nav>
