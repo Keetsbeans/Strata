@@ -13,6 +13,7 @@ import ThreadPicker from "@/components/ThreadPicker";
 import Mascot from "@/components/Mascot";
 import PickUpRow from "@/components/PickUpRow";
 import ThoughtDeck from "@/components/ThoughtDeck";
+import ThoughtMenu from "@/components/ThoughtMenu";
 import Icon from "@/components/Icon";
 import TopIcons from "@/components/TopIcons";
 import SlideSeg from "@/components/SlideSeg";
@@ -38,6 +39,7 @@ function Thoughts() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [pinning, setPinning] = useState<Thought | null>(null);
+  const [holding, setHolding] = useState<Thought | null>(null);
   const [note, setNote] = useState("");
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
@@ -174,7 +176,7 @@ function Thoughts() {
         ) : (
           <div className="stack">
             {list.map((t) => (
-              <ThoughtCard key={t.id} t={t} selecting={selecting} picked={picked.includes(t.id)} onPick={() => setPicked((p) => (p.includes(t.id) ? p.filter((x) => x !== t.id) : [...p, t.id]))} onPin={() => setPinning(t)} threadName={threadName(t)} />
+              <ThoughtCard key={t.id} t={t} selecting={selecting} picked={picked.includes(t.id)} onPick={() => setPicked((p) => (p.includes(t.id) ? p.filter((x) => x !== t.id) : [...p, t.id]))} onPin={() => setPinning(t)} onHold={t.finished ? () => setHolding(t) : undefined} threadName={threadName(t)} />
             ))}
           </div>
         )}
@@ -213,6 +215,19 @@ function Thoughts() {
         <Nav />
       )}
       {undo && <Toast title={undo.title} line={undo.line} sub="Kept there for 30 days" onUndo={restore} onDone={doneUndo} />}
+      {holding && (
+        <ThoughtMenu
+          store={store}
+          thought={holding}
+          onClose={() => setHolding(null)}
+          onDone={(msg, discarded) => {
+            if (discarded) setUndo({ ids: [holding.id], title: "Moved to Discarded", line: `“${preview(holding.body, 40)}”` });
+            else setNote(msg);
+            setHolding(null);
+            reload();
+          }}
+        />
+      )}
       {toThread && <ThreadPicker store={store} count={picked.length} onPick={addToThread} onClose={() => setToThread(false)} />}
       {pinning && (
         <ThreadPicker
@@ -222,7 +237,7 @@ function Thoughts() {
           onPick={async (tid) => {
             await putInThread(store, pinning, tid);
             const th = await store.thread(tid);
-            setNote(`Put in “${th?.title ?? "the thread"}”.`);
+            setNote(`Added to “${th?.title ?? "the thread"}”.`);
             setPinning(null);
             reload();
           }}

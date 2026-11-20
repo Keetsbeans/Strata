@@ -114,7 +114,7 @@ export default function ThoughtDeck({
               <span className="small muted">{stamp(t.created_at)}</span>
               {th && <span className="small">In “{th}”</span>}
             </span>
-            <button className={"pin-btn" + (t.thread_id ? " on" : "")} style={{ position: "static", margin: "-10px -10px 0 0" }} aria-label={t.thread_id ? "Put it in another thread" : "Put it in a thread"} onClick={() => onPin(t)}>
+            <button className={"pin-btn" + (t.thread_id ? " on" : "")} style={{ position: "static", margin: "-10px -10px 0 0" }} aria-label={t.thread_id ? "Add it to another thread" : "Add to a thread"} onClick={() => onPin(t)}>
               <i><Icon name="pin" size={15} width={2} /></i>
             </button>
           </div>

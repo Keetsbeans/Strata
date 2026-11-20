@@ -1,20 +1,16 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useApp } from "@/app/providers";
 import { getName } from "@/lib/profile";
 import Icon from "./Icon";
 import Mascot from "./Mascot";
 
 /** The menu drawer: everything that doesn't need a place in the bottom bar. Slides in from the right; the menu button above it turns into the close cross. */
 export default function Drawer({ closing, onClose }: { closing: boolean; onClose: () => void }) {
-  const { store } = useApp();
-  const [threads, setThreads] = useState<number | null>(null);
   const [name, setName] = useState("");
   useEffect(() => {
     setName(getName());
-    store.threads().then((t) => setThreads(t.length)).catch(() => {});
-  }, [store]);
+  }, []);
   const close = onClose;
   useEffect(() => {
     const key = (e: KeyboardEvent) => e.key === "Escape" && close();
@@ -50,7 +46,6 @@ export default function Drawer({ closing, onClose }: { closing: boolean; onClose
           <span style={{ width: 52 }} aria-hidden="true" />
         </div>
         <nav className="stack" style={{ gap: 6 }} aria-label="Menu">
-          {row("/threads/", "thread", "Threads", "One idea, followed over time", threads)}
           <div className="drawer-row soon" aria-disabled="true">
             <span className="drawer-ic"><Icon name="clock" size={19} /></span>
             <span className="grow stack" style={{ gap: 1 }}>

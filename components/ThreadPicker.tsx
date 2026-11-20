@@ -37,8 +37,8 @@ export default function ThreadPicker({ store, onPick, onClose, count = 1, though
   return (
     <>
       <div className="scrim" onClick={onClose} />
-      <div className="dialog" role="dialog" aria-modal="true" aria-label="Put it in a thread" style={{ maxHeight: "84dvh", overflowY: "auto" }}>
-        <h2>Which thread should {count === 1 ? "this" : `these ${count}`} go under?</h2>
+      <div className="dialog" role="dialog" aria-modal="true" aria-label="Add to a thread" style={{ maxHeight: "84dvh", overflowY: "auto" }}>
+        <h2>Add {count === 1 ? "it" : `these ${count}`} to a thread</h2>
         {thought && <p className="serif" style={{ color: "var(--ink)", fontSize: 16 }}>“{preview(thought.body, 90)}”</p>}
         {threads && threads.length > 5 && <input className="input" placeholder="Find a thread" aria-label="Find a thread" value={q} onChange={(e) => setQ(e.target.value)} />}
         <div className="stack" style={{ gap: 8 }}>
@@ -53,7 +53,6 @@ export default function ThreadPicker({ store, onPick, onClose, count = 1, though
           })}
           {threads?.length === 0 && <span className="muted small">No threads yet. Start the first one below.</span>}
         </div>
-        {thought?.thread_id && <span className="small muted">It stays where it is and shows in the thread you pick as a link.</span>}
         <form className="stack" style={{ gap: 8 }} onSubmit={create}>
           <label className="small" style={{ fontWeight: 600 }} htmlFor="new-thread">
             {thought && !thought.thread_id ? "Or start a new thread from it" : "Or start a new thread"}
