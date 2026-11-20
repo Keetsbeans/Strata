@@ -481,6 +481,10 @@ try {
   console.log("Profile, settings and colour themes");
   ok(await seen(page.locator("header").getByRole("img", { name: "Strata" })), "Home shows the Strata logo at the top left");
   await page.locator("header").getByRole("button", { name: "Menu" }).click();
+  await page.waitForTimeout(650);
+  await shot("09b-home-drawer");
+  const ink = await page.evaluate(() => [getComputedStyle(document.querySelector(".drawer-row strong")).color, getComputedStyle(document.querySelector(".drawer-ic svg")).color, getComputedStyle(document.querySelector(".drawer")).backgroundColor]);
+  ok(ink[0] === "rgb(21, 21, 21)" && ink[1] === "rgb(21, 21, 21)", "drawer text and icons are dark on its light paper, even from the dark Home header: " + ink.join(" / "));
   await page.getByRole("dialog", { name: "Menu" }).getByRole("link", { name: /Your profile|Profile and export/ }).click();
   await page.waitForURL(/\/profile\//);
   await page.getByRole("button", { name: "Add a name" }).click();

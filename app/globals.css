@@ -744,3 +744,5 @@ button.mood { min-height: 44px; padding: 0 12px; font-size: 12px; }
 .scrim.fade.slow { animation-duration: 0.45s; }
 .scrim.fade.slow.out { animation-duration: 0.38s; }
 @media (prefers-reduced-motion: reduce) { .menu-btn i { transition: none; } }
+/* overlays opened from the dark Home header must not inherit its white text */
+.drawer, .search-sheet { color: var(--ink); }
