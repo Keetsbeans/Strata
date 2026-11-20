@@ -137,3 +137,27 @@ export const KIND_LABEL: Record<InterestKind, { one: string; many: string; want:
   music: { one: "Music", many: "Music", want: "Want to listen", done: "Listened" },
   article: { one: "Article", many: "Articles", want: "To read", done: "Read" },
 };
+
+/** a scrambled box: AES-GCM ciphertext and its nonce, both base64 */
+export type Box = { iv: string; data: string };
+
+/**
+ * A time capsule: a letter to future you plus copies of chosen thoughts, scrambled on the phone.
+ * box holds the contents. date_key unlocks it once open_at has passed. key_box holds the same
+ * key locked with the spare key (only for "key" seals; the spare key itself is never stored).
+ */
+export type TimeCapsule = {
+  id: string;
+  title: string;
+  seal: "key" | "strict";
+  open_at: string;
+  count: number; // how many thoughts are inside (shown on the sealed capsule)
+  box: Box;
+  date_key: string;
+  key_box: Box | null;
+  opened_at: string | null;
+  opened_early: boolean;
+  created_at: string;
+};
+/** what is inside, once unscrambled */
+export type CapsuleInside = { letter: string; thoughts: { body: string; kind: string; created_at: string }[] };

@@ -12,6 +12,8 @@ import { preview } from "@/components/ThoughtCard";
 import Folder from "@/components/Folder";
 import TopIcons from "@/components/TopIcons";
 import { comingBack } from "@/lib/inbox";
+import { isReady } from "@/lib/capsule";
+import { CapsuleArt, longDay } from "@/components/Capsule";
 import { introSeen, markIntro } from "@/lib/intro";
 import Onboarding from "@/components/Onboarding";
 import { isUnsorted } from "@/lib/threads";
@@ -29,8 +31,8 @@ function greeting(d: Date) {
 export default function Home() {
   const { store } = useApp();
   const { data, error } = useData(async () => {
-    const [thoughts, threads, interests, collections, links, threadLinks] = await Promise.all([store.thoughts(), store.threads(), store.interests(), store.collections(), store.links(), store.threadLinks()]);
-    return { thoughts, threads, interests, collections, links, threadLinks };
+    const [thoughts, threads, interests, collections, links, threadLinks, capsules] = await Promise.all([store.thoughts(), store.threads(), store.interests(), store.collections(), store.links(), store.threadLinks(), store.capsules()]);
+    return { thoughts, threads, interests, collections, links, threadLinks, capsules };
   }, [store]);
   const [hideLast, setHideLast] = useState(false);
   // people who set up before the opening screens existed, or who asked to see them again
@@ -57,7 +59,8 @@ export default function Home() {
   if (error) return <main className="screen"><p className="error">{error}</p><Nav /></main>;
   if (!data) return <main className="screen"><Nav /></main>;
 
-  const { thoughts, threads, interests, collections, links, threadLinks } = data;
+  const { thoughts, threads, interests, collections, links, threadLinks, capsules } = data;
+  const readyCaps = capsules.filter((c) => !c.opened_at && isReady(c));
   const back = comingBack(thoughts, interests, now);
   const recentItems = interests.slice(0, 6);
   const byId = new Map(interests.map((i) => [i.id, i]));
@@ -228,9 +231,22 @@ export default function Home() {
             <Folder href="/thoughts/?filter=unsorted" label="Unsorted" count={unsorted.length} icon="flip" colour="var(--butter)" sheet="var(--card)" />
             <Folder href="/stack/" label="Unfinished" count={drafts.length} icon="unfinished" colour="var(--blue)" sheet="var(--card)" />
             <Folder href="/threads/" label="Threads" count={threads.length} icon="threads" colour="var(--lilac)" sheet="var(--card)" />
-            <Folder href="/inbox/" label="Inbox" count={back.yearAgo.length + back.waiting.length + links.length} icon="inbox" colour="var(--butter)" sheet="var(--card)" />
+            <Folder href="/inbox/" label="Inbox" count={readyCaps.length + back.yearAgo.length + back.waiting.length + links.length} icon="inbox" colour="var(--butter)" sheet="var(--card)" />
           </div>
         </section>
+
+        {readyCaps.length > 0 && (
+          <Link href={`/capsule/?id=${readyCaps[0].id}`} className="card back-card cap-row ready" style={{ textDecoration: "none" }} data-tip="home-capsule">
+            <span className="row" style={{ gap: 12 }}>
+              <CapsuleArt c={readyCaps[0]} size={52} state="ready" />
+              <span className="stack grow" style={{ gap: 2 }}>
+                <strong style={{ fontWeight: 600 }}>{readyCaps.length > 1 ? `${readyCaps.length} time capsules are ready` : "A time capsule is ready"}</strong>
+                <span className="small muted">“{readyCaps[0].title}”, sealed {longDay(readyCaps[0].created_at)}</span>
+              </span>
+              <span className="tag sm butter">Open</span>
+            </span>
+          </Link>
+        )}
 
         {back.yearAgo.length > 0 && (
           <Link href="/inbox/" className="card back-card" style={{ textDecoration: "none" }}>

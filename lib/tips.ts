@@ -1,7 +1,7 @@
 /** First-visit tips: which pages' guides have been seen. Kept on this phone only. */
 const KEY = "strata:tips-seen";
 /** every guide in the app, plus the older one-off intros, so "Show tips again" brings them all back */
-export const ALL_TIPS = ["home", "thoughts", "collections", "board", "jar"];
+export const ALL_TIPS = ["home", "thoughts", "collections", "board", "jar", "capsules"];
 const OLDER = ["strata:threads-intro", "strata:swipe-guide"];
 
 function seen(): string[] {

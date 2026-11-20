@@ -27,6 +27,7 @@ const P: Record<string, string> = {
   "swipe-up": "M10 13V6.5a1.5 1.5 0 0 1 3 0V11l4 .9a2 2 0 0 1 1.6 2.2L18 20h-7l-3.4-4.3a1.4 1.4 0 0 1 2.1-1.9L10 14.5M5 10V3M3 5l2-2 2 2",
   undo: "M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3",
   redo: "M15 14l5-5-5-5M20 9H9a5 5 0 0 0 0 10h3",
+  key: "M14.5 9.5L21 3M18 6l2 2M16 8l2 2",
   link: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1",
 };
 
@@ -36,6 +37,7 @@ export default function Icon({ name, size = 20, color = "currentColor", width = 
       {name === "search" && <circle cx="11" cy="11" r="7" />}
       {name === "clock" && <circle cx="12" cy="12" r="9" />}
       {name === "user" && <circle cx="12" cy="8.5" r="3.8" />}
+      {name === "key" && <circle cx="9" cy="15" r="5" />}
       <path d={P[name]} />
     </svg>
   );

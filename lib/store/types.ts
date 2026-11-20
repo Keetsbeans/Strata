@@ -1,7 +1,9 @@
-import type { Collection, CollectionItem, Decor, ImportBatch, Interest, InterestKind, Placement, Thought, ThoughtKind, ThoughtVersion, Thread, ThreadLink, ThreadState, SavedLink } from "@/lib/types";
+import type { Collection, CollectionItem, Decor, ImportBatch, Interest, InterestKind, Placement, Thought, ThoughtKind, ThoughtVersion, Thread, ThreadLink, ThreadState, SavedLink, TimeCapsule } from "@/lib/types";
 
 export type NewThought = { body: string; kind: ThoughtKind; finished: boolean; topics?: string[]; thread_id?: string | null; interest_id?: string | null; jar?: boolean };
 export type ThoughtPatch = Partial<Pick<Thought, "body" | "topics" | "finished" | "thread_id" | "kind" | "kept" | "interest_id" | "collection_id" | "jar" | "word_links">>;
+
+export type NewCapsule = Omit<TimeCapsule, "id" | "created_at" | "opened_at" | "opened_early">;
 
 export type NewInterest = Pick<Interest, "kind" | "title"> & Partial<Omit<Interest, "id" | "created_at" | "updated_at">>;
 export type InterestPatch = Partial<Omit<Interest, "id" | "created_at" | "updated_at">>;
@@ -72,5 +74,12 @@ export interface Store {
   links(): Promise<SavedLink[]>; // newest first
   addLink(l: { url: string; title?: string; note?: string }): Promise<SavedLink>;
   removeLink(id: string): Promise<void>;
+
+  // time capsules
+  capsules(): Promise<TimeCapsule[]>; // soonest to open first
+  capsule(id: string): Promise<TimeCapsule | null>;
+  addCapsule(c: NewCapsule): Promise<TimeCapsule>;
+  markCapsuleOpened(id: string, early: boolean): Promise<void>;
+  deleteCapsule(id: string): Promise<void>;
   exportAll(): Promise<unknown>;
 }
