@@ -26,7 +26,7 @@ export class CloudStore implements Store {
   }
   async addThought(t: NewThought) {
     return this.ok<Thought>(
-      this.sb.from("thoughts").insert({ body: t.body, kind: t.kind, finished: t.finished, topics: t.topics ?? [], thread_id: t.thread_id ?? null, interest_id: t.interest_id ?? null }).select().single()
+      this.sb.from("thoughts").insert({ body: t.body, kind: t.kind, finished: t.finished, topics: t.topics ?? [], thread_id: t.thread_id ?? null, interest_id: t.interest_id ?? null, jar: !!t.jar }).select().single()
     );
   }
   async updateThought(id: string, patch: ThoughtPatch) {

@@ -460,3 +460,6 @@ alter table public.thoughts add column if not exists word_links jsonb not null d
 
 -- a thought can be about a whole collection (it stays in Thoughts; the collection lists it)
 alter table public.thoughts add column if not exists collection_id uuid references public.collections (id) on delete set null;
+
+-- gratitude jar: a thought can sit in the jar
+alter table public.thoughts add column if not exists jar boolean not null default false;

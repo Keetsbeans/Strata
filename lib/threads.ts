@@ -5,7 +5,7 @@ import type { Thought, Thread, ThreadLink } from "@/lib/types";
  * or put it in (or linked it to) a thread. Unsorted is everything finished that's still loose.
  */
 export function isUnsorted(t: Thought, links: ThreadLink[]) {
-  return t.finished && !t.discarded_at && !t.topics.length && !t.kept && !t.thread_id && !links.some((l) => l.thought_id === t.id);
+  return t.finished && !t.discarded_at && !t.jar && !t.topics.length && !t.kept && !t.thread_id && !links.some((l) => l.thought_id === t.id);
 }
 
 const byDate = (a: Thought, b: Thought) => a.created_at.localeCompare(b.created_at);

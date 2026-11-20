@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import type { CollectionItem, Decor, Interest } from "@/lib/types";
 import type { Store } from "@/lib/store/types";
 import Poster from "./Poster";
+import Icon from "./Icon";
 
 /** where a thing sits on the board until it is moved: a loose grid with a little tilt */
 const W = 170;
@@ -27,59 +28,118 @@ export const STICKERS: Record<string, { label: string; svg: React.ReactNode }> =
 type Thing = { x: CollectionItem; it: Interest };
 type Spot = { x: number; y: number; r: number; z: number };
 type Grab = { kind: "item" | "decor"; id: string; dx: number; dy: number };
+type Snap = { spots: Record<string, Spot>; decor: Decor[] };
+type Cam = { x: number; y: number; s: number };
 
-/** how far things can be dragged, in board units: big enough to spread out, small enough to never get lost */
-const LIMIT = { min: -600, max: 3000 };
-const inside = (v: number) => Math.min(LIMIT.max, Math.max(LIMIT.min, Number.isFinite(v) ? v : 0));
+/** the board is a sheet of a fixed size: room to spread out, but it has edges, so nothing gets lost */
+export const SHEET = { w: 1100, h: 1500 };
+const D = 64; // a sticker or label, roughly
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Number.isFinite(v) ? v : lo));
+const fitSpot = (s: Spot): Spot => ({ ...s, x: clamp(s.x, 0, SHEET.w - W), y: clamp(s.y, 0, SHEET.h - H), r: Number.isFinite(s.r) ? s.r : 0 });
+const fitDecor = (d: Decor): Decor => ({ ...d, x: clamp(d.x, 0, SHEET.w - D * 2), y: clamp(d.y, 0, SHEET.h - D) });
+const DOCK = 84; // the tools dock covers the bottom of the board
+const PAD = 24;
+const MIN_S = 0.34;
+const MAX_S = 1.6;
 
 export default function Board({ store, collectionId, things, decor, onDecor, center, tools }: { store: Store; collectionId: string; things: Thing[]; decor: Decor[]; onDecor: (d: Decor[]) => void; center?: React.MutableRefObject<() => { x: number; y: number }>; tools?: React.ReactNode }) {
   const router = useRouter();
   const view = useRef<HTMLDivElement>(null);
-  const [cam, setCamRaw] = useState({ x: 0, y: 0, s: 0.62 });
-  // the view can't drift so far that everything is off screen, and never takes a broken number
-  const setCam = (next: { x: number; y: number; s: number } | ((c: { x: number; y: number; s: number }) => { x: number; y: number; s: number })) =>
+  const [cam, setCamRaw] = useState<Cam>({ x: PAD, y: PAD, s: 0.62 });
+  /** the view stays on the sheet: it can't be pulled past an edge, and a small sheet sits in the middle */
+  const fitCam = (n: Cam): Cam => {
+    const r = view.current?.getBoundingClientRect();
+    const s = clamp(n.s, MIN_S, MAX_S);
+    if (!r || !r.width) return { ...n, s };
+    const vw = r.width;
+    const vh = Math.max(120, r.height - DOCK);
+    const axis = (v: number, size: number, room: number) => (size + PAD * 2 <= room ? (room - size) / 2 : clamp(v, room - size - PAD, PAD));
+    return { s, x: axis(n.x, SHEET.w * s, vw), y: axis(n.y, SHEET.h * s, vh) };
+  };
+  const setCam = (next: Cam | ((c: Cam) => Cam)) =>
     setCamRaw((c) => {
       const n = typeof next === "function" ? next(c) : next;
-      if (![n.x, n.y, n.s].every(Number.isFinite)) return c;
-      const r = view.current?.getBoundingClientRect();
-      if (!r) return n;
-      // keep at least one real thing in sight, clear of the tools and the bottom bar:
-      // if nothing would show, slide the view just far enough to bring the nearest one back
-      const all = [...Object.values(spotsRef.current), ...decor];
-      if (!all.length) return n;
-      // most of the item must stay on the board
-      const top = 8, bottom = r.height - 84; // clear of the tools dock
-      const shift = (lo: number, hi: number, a: number, b: number) => {
-        const keep = Math.min((hi - lo) * 0.7, (b - a) / 2);
-        return hi < a + keep ? a + keep - hi : lo > b - keep ? b - keep - lo : 0;
-      };
-      let best = { dx: 0, dy: 0, d: Infinity };
-      for (const a of all) {
-        const dx = shift(a.x * n.s + n.x, (a.x + W) * n.s + n.x, 0, r.width);
-        const dy = shift(a.y * n.s + n.y, (a.y + H) * n.s + n.y, top, bottom);
-        const d = Math.abs(dx) + Math.abs(dy);
-        if (d < best.d) best = { dx, dy, d };
-        if (!d) break;
-      }
-      const x = n.x + best.dx, y = n.y + best.dy;
-      return { s: n.s, x, y };
+      return [n.x, n.y, n.s].every(Number.isFinite) ? fitCam(n) : c;
     });
-  const spotsRef = useRef<Record<string, Spot>>({});
   const [spots, setSpots] = useState<Record<string, Spot>>({});
+  const spotsRef = useRef(spots);
   spotsRef.current = spots;
+  const decorRef = useRef(decor);
   const [moving, setMoving] = useState<Grab | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
   const ptrs = useRef(new Map<number, { x: number; y: number }>());
   const gesture = useRef<{ start?: { x: number; y: number; cx: number; cy: number }; pinch?: { d: number; s: number; mx: number; my: number; cx: number; cy: number }; hold?: number; target?: { kind: "item" | "decor"; id: string }; moved?: boolean; grab?: Grab | null }>({});
 
-  // everything gets a place; ones never moved sit on the loose grid
+  // everything gets a place on the sheet; ones never moved sit on the loose grid
   useEffect(() => {
     const next: Record<string, Spot> = {};
     things.forEach(({ x }, i) => {
-      next[x.id] = x.x != null && x.y != null ? { x: x.x, y: x.y, r: x.r ?? 0, z: x.z ?? i } : gridSpot(i);
+      next[x.id] = fitSpot(x.x != null && x.y != null ? { x: x.x, y: x.y, r: x.r ?? 0, z: x.z ?? i } : gridSpot(i));
     });
     setSpots(next);
   }, [things]);
+  // settle the view once the board has its size
+  useEffect(() => {
+    setCam((c) => c);
+    const ro = new ResizeObserver(() => setCam((c) => c));
+    if (view.current) ro.observe(view.current);
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // undo and redo: a snapshot before every change
+  const hist = useRef<{ past: Snap[]; future: Snap[] }>({ past: [], future: [] });
+  const [, setVersion] = useState(0);
+  const applying = useRef(false);
+  const snap = (): Snap => ({ spots: spotsRef.current, decor: decorRef.current });
+  const record = (before: Snap = snap()) => {
+    hist.current.past = [...hist.current.past.slice(-29), before];
+    hist.current.future = [];
+    setVersion((v) => v + 1);
+  };
+  // stickers and labels added or taken off from outside count as changes too
+  useEffect(() => {
+    const prev = decorRef.current;
+    decorRef.current = decor;
+    if (!applying.current && prev.length !== decor.length) record({ spots: spotsRef.current, decor: prev });
+    applying.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [decor]);
+  const apply = (to: Snap) => {
+    const from = spotsRef.current;
+    setSpots(to.spots);
+    for (const [id, sp] of Object.entries(to.spots)) if (from[id] !== sp) store.placeItem(id, sp);
+    if (to.decor !== decorRef.current) {
+      applying.current = to.decor.length !== decorRef.current.length;
+      onDecor(to.decor);
+      store.updateCollection(collectionId, { decor: to.decor });
+    }
+    setPicked(null);
+    setVersion((v) => v + 1);
+  };
+  const undo = () => {
+    const h = hist.current;
+    const to = h.past.pop();
+    if (!to) return;
+    h.future.push(snap());
+    apply(to);
+  };
+  const redo = () => {
+    const h = hist.current;
+    const to = h.future.pop();
+    if (!to) return;
+    h.past.push(snap());
+    apply(to);
+  };
+  /** back into neat rows, and the view back to the top */
+  const tidy = () => {
+    record();
+    const next: Record<string, Spot> = {};
+    things.forEach(({ x }, i) => (next[x.id] = gridSpot(i)));
+    setSpots(next);
+    things.forEach(({ x }) => store.placeItem(x.id, next[x.id]));
+    setCam({ x: PAD, y: PAD, s: 0.62 });
+  };
 
   const toWorld = (px: number, py: number) => {
     const r = view.current!.getBoundingClientRect();
@@ -89,16 +149,18 @@ export default function Board({ store, collectionId, things, decor, onDecor, cen
 
   const down = (e: React.PointerEvent, target?: { kind: "item" | "decor"; id: string }) => {
     e.stopPropagation();
-    view.current?.setPointerCapture(e.pointerId);
+    try {
+      view.current?.setPointerCapture(e.pointerId);
+    } catch {}
     ptrs.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const g = gesture.current;
-    if (ptrs.current.size === 2) {
+    if (ptrs.current.size >= 2) {
       clearTimeout(g.hold);
       const [a, b] = [...ptrs.current.values()];
       const r = view.current!.getBoundingClientRect();
       g.pinch = { d: Math.max(24, Math.hypot(a.x - b.x, a.y - b.y)), s: cam.s, mx: (a.x + b.x) / 2 - r.left, my: (a.y + b.y) / 2 - r.top, cx: cam.x, cy: cam.y };
+      if (g.grab) setMoving(null);
       g.grab = null;
-      setMoving(null);
       return;
     }
     g.start = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y };
@@ -108,12 +170,15 @@ export default function Board({ store, collectionId, things, decor, onDecor, cen
     if (target) {
       g.hold = window.setTimeout(() => {
         const w = toWorld(e.clientX, e.clientY);
-        const at = target.kind === "item" ? spots[target.id] : decor.find((d) => d.id === target.id);
+        const at = target.kind === "item" ? spotsRef.current[target.id] : decorRef.current.find((d) => d.id === target.id);
         if (!at) return;
+        record();
         g.grab = { kind: target.kind, id: target.id, dx: w.x - at.x, dy: w.y - at.y };
-        if (target.kind === "item") setSpots((s) => ({ ...s, [target.id]: { ...s[target.id], z: topZ() } }));
+        if (target.kind === "item") setSpots((s) => (s[target.id] ? { ...s, [target.id]: { ...s[target.id], z: topZ() } } : s));
         setMoving(g.grab);
-        navigator.vibrate?.(12);
+        try {
+          navigator.vibrate?.(12);
+        } catch {}
       }, 380);
     }
   };
@@ -121,9 +186,10 @@ export default function Board({ store, collectionId, things, decor, onDecor, cen
     if (!ptrs.current.has(e.pointerId)) return;
     ptrs.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const g = gesture.current;
-    if (g.pinch && ptrs.current.size === 2) {
+    if (g.pinch) {
+      if (ptrs.current.size < 2) return;
       const [a, b] = [...ptrs.current.values()];
-      const s = Math.min(1.6, Math.max(0.35, (g.pinch.s * Math.hypot(a.x - b.x, a.y - b.y)) / g.pinch.d));
+      const s = clamp((g.pinch.s * Math.hypot(a.x - b.x, a.y - b.y)) / g.pinch.d, MIN_S, MAX_S);
       const k = s / g.pinch.s;
       setCam({ s, x: g.pinch.mx - (g.pinch.mx - g.pinch.cx) * k, y: g.pinch.my - (g.pinch.my - g.pinch.cy) * k });
       return;
@@ -138,10 +204,11 @@ export default function Board({ store, collectionId, things, decor, onDecor, cen
     if (g.grab) {
       const w = toWorld(e.clientX, e.clientY);
       const { id, kind, dx: ox, dy: oy } = g.grab;
-      if (kind === "item") setSpots((s) => ({ ...s, [id]: { ...s[id], x: inside(w.x - ox), y: inside(w.y - oy) } }));
-      else onDecor(decor.map((d) => (d.id === id ? { ...d, x: inside(w.x - ox), y: inside(w.y - oy) } : d)));
+      if (kind === "item") setSpots((s) => (s[id] ? { ...s, [id]: fitSpot({ ...s[id], x: w.x - ox, y: w.y - oy }) } : s));
+      else onDecor(decorRef.current.map((d) => (d.id === id ? fitDecor({ ...d, x: w.x - ox, y: w.y - oy }) : d)));
     } else if (g.moved) {
-      setCam((c) => ({ ...c, x: g.start!.cx + dx, y: g.start!.cy + dy }));
+      const st = g.start;
+      setCam((c) => ({ ...c, x: st.cx + dx, y: st.cy + dy }));
     }
   };
   const up = (e: React.PointerEvent) => {
@@ -155,8 +222,8 @@ export default function Board({ store, collectionId, things, decor, onDecor, cen
     }
     if (g.grab) {
       const { id, kind } = g.grab;
-      if (kind === "item" && spots[id]) store.placeItem(id, spots[id]);
-      if (kind === "decor") store.updateCollection(collectionId, { decor });
+      if (kind === "item" && spotsRef.current[id]) store.placeItem(id, spotsRef.current[id]);
+      if (kind === "decor") store.updateCollection(collectionId, { decor: decorRef.current });
       setMoving(null);
       setPicked(kind === "decor" ? id : null);
     } else if (!g.moved && g.target) {
@@ -171,16 +238,17 @@ export default function Board({ store, collectionId, things, decor, onDecor, cen
   };
   const wheel = (e: React.WheelEvent) => {
     const r = view.current!.getBoundingClientRect();
-    const s = Math.min(1.6, Math.max(0.35, cam.s * (e.deltaY < 0 ? 1.1 : 0.9)));
+    const s = clamp(cam.s * (e.deltaY < 0 ? 1.1 : 0.9), MIN_S, MAX_S);
     const mx = e.clientX - r.left;
     const my = e.clientY - r.top;
     setCam({ s, x: mx - (mx - cam.x) * (s / cam.s), y: my - (my - cam.y) * (s / cam.s) });
   };
 
-  /** the middle of what you can see, in board units */
+  /** the middle of what you can see, in board units, kept on the sheet */
   const middle = () => {
     const r = view.current?.getBoundingClientRect();
-    return r ? { x: (r.width / 2 - cam.x) / cam.s, y: (r.height / 2 - cam.y) / cam.s } : { x: 200, y: 200 };
+    const m = r ? { x: (r.width / 2 - cam.x) / cam.s, y: ((r.height - DOCK) / 2 - cam.y) / cam.s } : { x: 200, y: 200 };
+    return { x: clamp(m.x, D, SHEET.w - D * 2), y: clamp(m.y, D, SHEET.h - D * 2) };
   };
   if (center) center.current = middle;
 
@@ -191,10 +259,17 @@ export default function Board({ store, collectionId, things, decor, onDecor, cen
     setPicked(null);
   };
 
-  const fit = () => setCam({ x: 0, y: 0, s: 0.62 });
-
+  const h = hist.current;
   return (
     <div className="board-wrap">
+      <div className="board-undo" role="group" aria-label="Undo and redo" data-tip="board-undo">
+        <button className="icon-btn round" aria-label="Undo" disabled={!h.past.length} onClick={undo}>
+          <Icon name="undo" size={18} />
+        </button>
+        <button className="icon-btn round" aria-label="Redo" disabled={!h.future.length} onClick={redo}>
+          <Icon name="redo" size={18} />
+        </button>
+      </div>
       <div
         className="board"
         data-tip="board"
@@ -207,9 +282,9 @@ export default function Board({ store, collectionId, things, decor, onDecor, cen
         onWheel={wheel}
         aria-label="Board. Drag to look around, pinch to zoom, long-press a thing to move it."
         role="region"
-        style={{ backgroundPosition: `${cam.x}px ${cam.y}px`, backgroundSize: `${22 * cam.s}px ${22 * cam.s}px` }}
       >
         <div className="board-world" style={{ transform: `translate(${cam.x}px, ${cam.y}px) scale(${cam.s})` }}>
+          <div className="board-sheet" style={{ width: SHEET.w, height: SHEET.h }} aria-hidden="true" />
           {things.map(({ x, it }, i) => {
             const s = spots[x.id];
             if (!s) return null;
@@ -242,7 +317,7 @@ export default function Board({ store, collectionId, things, decor, onDecor, cen
             <div
               key={d.id}
               className={"board-decor " + d.kind + (picked === d.id ? " picked" : "") + (moving?.id === d.id ? " moving" : "")}
-              style={{ left: d.x, top: d.y, transform: `rotate(${d.r}deg)`, zIndex: 900 }}
+              style={{ left: clamp(d.x, 0, SHEET.w - D * 2), top: clamp(d.y, 0, SHEET.h - D), transform: `rotate(${d.r}deg)`, zIndex: 900 }}
               onPointerDown={(e) => down(e, { kind: "decor", id: d.id })}
               role="img"
               aria-label={d.kind === "label" ? `Label: ${d.name}` : STICKERS[d.name]?.label ?? "Sticker"}
@@ -265,7 +340,7 @@ export default function Board({ store, collectionId, things, decor, onDecor, cen
       </div>
       <div className="board-dock" data-tip="board-tools" role="toolbar" aria-label="Decorate the board">
         {tools}
-        <button onClick={fit}>Back to start</button>
+        <button onClick={tidy}>Tidy up</button>
       </div>
     </div>
   );

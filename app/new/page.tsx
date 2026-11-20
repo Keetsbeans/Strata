@@ -57,6 +57,15 @@ export default function NewThought() {
           <span>A full page, top to bottom. Write as much as you please.</span>
         </span>
       </Link>
+      <Link href="/write/?kind=card&jar=1" className="card pick" style={{ boxShadow: "3px 3px 0 var(--ink)", background: "color-mix(in srgb, var(--butter) 35%, var(--card))" }}>
+        <span className="pick-art jar-art" aria-hidden="true">
+          <span className="jar-mini"><i /></span>
+        </span>
+        <span className="stack" style={{ gap: 4 }}>
+          <strong>For the gratitude jar</strong>
+          <span>One small thing you&apos;re grateful for. It goes straight in the jar.</span>
+        </span>
+      </Link>
       <p className="muted" style={{ margin: 0, fontSize: 14 }}>
         Not sure? Start with a card. If it runs long, it opens into a full page and nothing is lost.
       </p>

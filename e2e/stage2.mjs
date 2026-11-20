@@ -188,13 +188,31 @@ try {
   await page.mouse.up();
   const b1 = await first.boundingBox();
   ok(Math.abs(b1.x - b0.x) > 40, "the film moved with the finger");
-  const bgBefore = await page.locator(".board").evaluate((el) => el.style.backgroundPosition);
+  const leftOf = () => first.evaluate((el) => el.style.left);
+  const movedLeft = await leftOf();
+  await page.getByRole("button", { name: "Undo" }).click();
+  ok((await leftOf()) !== movedLeft, "Undo puts the film back");
+  await page.getByRole("button", { name: "Redo" }).click();
+  ok((await leftOf()) === movedLeft, "Redo moves it again");
+  // pull the view hard past the edges: it stops at the sheet
+  const vb = await page.locator(".board").boundingBox();
+  for (const [fx, fy] of [[3000, 3000], [-3000, -3000]]) {
+    await page.mouse.move(vb.x + vb.width / 2, vb.y + vb.height / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) await page.mouse.move(vb.x + vb.width / 2 + (fx * i) / 10, vb.y + vb.height / 2 + (fy * i) / 10);
+    await page.mouse.up();
+    const t = await page.locator(".board-world").evaluate((el) => el.style.transform);
+    const [tx, ty] = t.match(/-?[\d.]+/g).map(Number);
+    const sheet = await page.locator(".board-sheet").boundingBox();
+    ok(sheet.x <= vb.x + 30 && sheet.x + sheet.width >= vb.x + vb.width - 30 && Number.isFinite(tx + ty), `dragging past an edge stops at the sheet (${Math.round(tx)}, ${Math.round(ty)})`);
+  }
+  const bgBefore = await page.locator(".board-world").evaluate((el) => el.style.transform);
   const bb = await page.locator(".board").boundingBox();
   await page.mouse.move(bb.x + bb.width - 30, bb.y + 240);
   await page.mouse.down();
-  for (let i = 1; i <= 5; i++) await page.mouse.move(bb.x + bb.width - 30 - i * 15, bb.y + 240 - i * 10);
+  for (let i = 1; i <= 5; i++) await page.mouse.move(bb.x + bb.width - 30 - i * 15 * -1, bb.y + 240 + i * 10);
   await page.mouse.up();
-  ok((await page.locator(".board").evaluate((el) => el.style.backgroundPosition)) !== bgBefore, "the dots move with the board");
+  ok((await page.locator(".board-world").evaluate((el) => el.style.transform)) !== bgBefore, "the sheet moves with the finger");
   const placed = await page.evaluate(() => JSON.parse(localStorage.getItem("strata:try:v1")).collectionItems.filter((x) => x.x != null).length);
   ok(placed >= 1, "where it was put is saved");
   await page.getByRole("button", { name: "Stickers", exact: true }).click();
@@ -207,6 +225,12 @@ try {
   await go("/collection/?id=c1");
   await page.locator(".board-item").first().waitFor();
   ok((await page.locator(".board-decor").count()) === 2, "the board view and its stickers are remembered");
+  await page.getByRole("button", { name: "Tidy up" }).click();
+  await page.waitForTimeout(300);
+  const tidied = await page.locator(".board-item").evaluateAll((els) => els.map((e) => e.style.left + "," + e.style.top));
+  ok(tidied[0] === "24px,24px" && tidied[1] === "218px,42px", "Tidy up puts every film back in rows: " + tidied.slice(0, 2).join(" "));
+  await page.getByRole("button", { name: "Undo" }).click();
+  ok((await page.locator(".board-item").evaluateAll((els) => els.map((e) => e.style.left + "," + e.style.top))).join() !== tidied.join(), "and Undo brings back the layout from before");
   await page.getByRole("button", { name: "Tidy up" }).click();
   await page.waitForTimeout(300);
   await page.locator(".board-item").first().click();
@@ -298,7 +322,7 @@ try {
   ok(await seen(page.getByRole("tab", { name: /Unsorted/ })), "filters are tabs, not buttons");
   ok(await seen(page.getByRole("tab", { name: "Threads" })), "Threads is a tab inside Thoughts");
   const navNames = await page.getByRole("navigation", { name: "Main" }).getByRole("link").evaluateAll((els) => els.map((e) => e.getAttribute("aria-label") || e.textContent.trim()));
-  ok(navNames.join(",") === "Home,Thoughts,New thought,Collections", "bottom bar is Home, Thoughts, +, Collections: " + navNames.join(","));
+  ok(navNames.join(",") === "Home,Thoughts,New thought,Collections,Jar", "bottom bar is Home, Thoughts, +, Collections, Jar: " + navNames.join(","));
   ok(!(await page.getByRole("navigation", { name: "Main" }).getByRole("button").count()), "no More in the bottom bar");
   await page.locator("header").getByRole("button", { name: "Menu" }).click();
   const drawer = page.getByRole("dialog", { name: "Menu" });
@@ -678,7 +702,7 @@ try {
   await go("/collection/?id=c1");
   await page.getByRole("button", { name: "Board" }).click();
   await page.locator(".tip-card").waitFor();
-  ok(await seen(page.locator(".tip-card").getByText("1 of 4")), "the board guide has four steps");
+  ok(await seen(page.locator(".tip-card").getByText("1 of 5")), "the board guide has five steps");
   await page.waitForTimeout(450);
   await shot("32-guide-board");
   await page.locator(".tip-card").getByRole("button", { name: /^Skip/ }).click();
@@ -702,6 +726,60 @@ try {
   await page.waitForURL(/\/threads\//);
   ok(await seen(page.getByRole("tab", { name: "Threads", selected: true })), "with nothing to sort, Thoughts opens on Threads");
 
+  console.log("Gratitude jar");
+  await page.evaluate(() => localStorage.setItem("strata:tips-seen", JSON.stringify(["home", "thoughts", "collections", "board", "jar"])));
+  await go("/jar/");
+  ok(await seen(page.getByText("Nothing in here yet")), "an empty jar says so");
+  await page.getByRole("button", { name: "Open the lid" }).click();
+  ok(await seen(page.locator(".toast").getByText(/The jar is empty/)), "opening an empty jar suggests adding to it");
+  await go("/new/");
+  await page.getByRole("link", { name: /For the gratitude jar/ }).click();
+  await page.waitForURL(/jar=1/);
+  ok((await page.getByRole("switch", { name: /gratitude jar/ }).getAttribute("aria-checked")) === "true", "+ offers the gratitude jar, and the switch is on");
+  const jarNotes = ["The light on the walk home today.", "A long call with my sister.", "Fresh bread from the corner shop.", "Finishing a book I loved.", "Rain on the window while I read."];
+  await page.getByLabel("Your thought").fill(jarNotes[0]);
+  await page.getByRole("button", { name: "Save" }).click();
+  await page.waitForURL(/\/jar\//);
+  ok(await seen(page.locator(".toast").getByText("In the jar")), "saving lands on the jar page");
+  for (const n of jarNotes.slice(1)) {
+    await go("/write/?kind=card&jar=1");
+    await page.getByLabel("Your thought").fill(n);
+    await page.getByRole("button", { name: "Save" }).click();
+    await page.waitForURL(/\/jar\//);
+  }
+  await page.locator(".jar-note").nth(4).waitFor();
+  ok((await page.locator(".jar-note").count()) === 5, "five folded notes in the jar");
+  ok(await seen(page.getByRole("heading", { name: "In the jar · 5" })), "and listed under the jar");
+  await page.waitForTimeout(1500);
+  await shot("40-jar");
+  const jarBefore = await page.locator(".jar-note").evaluateAll((els) => els.map((e) => e.style.transform).join());
+  await page.getByRole("button", { name: "Shake the jar" }).click({ position: { x: 60, y: 250 } });
+  await page.waitForTimeout(120);
+  await shot("41-jar-rattle");
+  const mid = await page.locator(".jar-note").evaluateAll((els) => els.map((e) => e.style.transform).join());
+  ok(mid !== jarBefore, "tapping the jar makes the notes jump");
+  ok((await page.locator(".jar-rock").evaluate((el) => el.style.transform)) !== "rotate(0deg)", "and the jar rocks");
+  await page.waitForTimeout(3500);
+  const settled = await page.locator(".jar-note").evaluateAll((els) => els.map((e) => { const m = e.style.transform.match(/-?[\d.]+/g).map(Number); return [m[0], m[1]]; }));
+  ok(settled.every(([x, y]) => x > 30 && x < 220 && y > 60 && y < 320), "and they settle back inside the glass: " + JSON.stringify(settled.map(([x, y]) => [Math.round(x), Math.round(y)])));
+  const unsortedJar = await page.evaluate(() => JSON.parse(localStorage.getItem("strata:try:v1")).thoughts.filter((t) => t.jar && !t.kept && !t.thread_id).length);
+  await go("/thoughts/?filter=unsorted&view=list");
+  ok(!(await page.getByText("Fresh bread from the corner shop.").count()) && unsortedJar === 5, "jar notes never land in Unsorted");
+  await go("/jar/");
+  await page.locator(".jar-note").nth(4).waitFor();
+  await page.getByRole("button", { name: "Open the lid and take a note out" }).click();
+  await page.waitForTimeout(500);
+  await shot("42-jar-unscrew");
+  const card = page.getByRole("dialog", { name: "A note from the jar" });
+  await card.waitFor({ timeout: 4000 });
+  ok(jarNotes.some((n) => true) && (await card.locator(".serif").innerText()).length > 5, "the lid unscrews and one note comes out: " + (await card.locator(".serif").innerText()));
+  ok((await page.locator(".jar-note").count()) === 4, "that note has left the jar");
+  await page.waitForTimeout(400);
+  await shot("43-jar-note");
+  await card.getByRole("button", { name: "Put it back" }).click();
+  await page.waitForTimeout(1600);
+  ok((await page.locator(".jar-note").count()) === 5 && (await page.locator(".jar-lid").getAttribute("class")).trim() === "jar-lid shut", "Put it back drops it in and screws the lid shut");
+
   console.log("Labels and tap sizes");
   const audit = async () =>
     page.evaluate(() => {
@@ -718,7 +796,7 @@ try {
       return out;
     });
   const found = { unnamed: new Set(), small: new Set() };
-  for (const path of ["/", "/thoughts/", "/thoughts/?filter=unsorted&view=cards", "/stack/", "/calendar/", "/interests/", "/interests/?kind=book", "/collections/", "/collection/?id=c1", "/inbox/", "/search/", "/profile/", "/settings/", "/new/", "/write/", "/threads/", "/thread/?id=sample-thread", "/thought/?id=s5", "/discarded/"]) {
+  for (const path of ["/", "/thoughts/", "/thoughts/?filter=unsorted&view=cards", "/stack/", "/calendar/", "/interests/", "/interests/?kind=book", "/collections/", "/collection/?id=c1", "/inbox/", "/search/", "/profile/", "/settings/", "/new/", "/write/", "/threads/", "/thread/?id=sample-thread", "/thought/?id=s5", "/discarded/", "/jar/"]) {
     await go(path);
     await page.waitForTimeout(150);
     const a = await audit();
